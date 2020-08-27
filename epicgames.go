@@ -104,6 +104,15 @@ func GetGiveaway() Giveaway {
 
 		// Находим даты начала и окончания раздачи
 		if len(rGame.Promotions.Current) > 0 {
+			/**
+			Эпик продолжает вставлять палки в колёса
+			Пришлось добавить ещё и такую проверку
+			Что же будет дальше?
+			*/
+			if rGame.Promotions.Current == nil {
+				continue
+			}
+
 			localGameStruct.IsAvailable = true
 			dates := rGame.Promotions.Current[0]["promotionalOffers"][0]
 
@@ -116,6 +125,10 @@ func GetGiveaway() Giveaway {
 				dates.EndDate,
 				moscowLoc)
 		} else {
+			if rGame.Promotions.Upcoming == nil {
+				continue
+			}
+
 			localGameStruct.IsAvailable = false
 			dates := rGame.Promotions.Upcoming[0]["promotionalOffers"][0]
 
