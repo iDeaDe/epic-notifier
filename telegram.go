@@ -54,22 +54,21 @@ func (tg *TelegramSettings) Post(game *Game, silent bool) {
 	developer := ""
 
 	if game.Publisher != "" {
-		publisher = fmt.Sprintf("Издатель: *%s*", game.Publisher)
+		publisher = fmt.Sprintf("Издатель: *%s*\n", game.Publisher)
 	}
 
 	if game.Developer != "" {
-		developer = fmt.Sprintf("Разработчик: *%s*", game.Developer)
+		developer = fmt.Sprintf("Разработчик: *%s*\n", game.Developer)
 	}
 
 	messageText := fmt.Sprintf(
-		"*Раздаётся игра %s*\n\n%s\n%s\n\nИгра доступна бесплатно до %s",
+		"*Раздаётся игра %s*\n\n%s%s\nИгра доступна бесплатно до %s",
 		game.Title,
 		publisher,
 		developer,
-		fmt.Sprintf("%d %s, %s",
+		fmt.Sprintf("%d %s",
 			game.Date.End.Day(),
-			GetMonth(game.Date.End.Month()),
-			game.Date.End.Format("15:04")))
+			GetMonth(game.Date.End.Month())))
 
 	qVal.Add("caption", strings.ReplaceAll(messageText, ".", "\\."))
 

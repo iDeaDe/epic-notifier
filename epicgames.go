@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sort"
@@ -9,7 +10,7 @@ import (
 )
 
 const EpicLink = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=RU&allowCountries=RU"
-const GameLink = "https://www.epicgames.com/store/ru/product/"
+const GameLink = "https://www.epicgames.com/store/ru/"
 
 var Months = []string{
 	"января",
@@ -24,6 +25,11 @@ var Months = []string{
 	"октября",
 	"ноября",
 	"декабря",
+}
+
+var ProductType = []string{
+	"product",
+	"bundles",
 }
 
 type Giveaway struct {
@@ -41,6 +47,7 @@ type RawGame struct {
 	Image       []map[string]string `json:"keyImages"`
 	GameInfo    []map[string]string `json:"customAttributes"`
 	ProductSlug string              `json:"productSlug"`
+	Categories  []map[string]string `json:"categories"`
 	Promotions  struct {
 		Current  []map[string][]PromotionalOffer `json:"promotionalOffers"`
 		Upcoming []map[string][]PromotionalOffer `json:"upcomingPromotionalOffers"`
@@ -68,6 +75,19 @@ type Data struct {
 			} `json:"searchStore"`
 		} `json:"Catalog"`
 	} `json:"data"`
+}
+
+func GetLink(slug string, categories []map[string]string) string {
+	gameCategory := ProductType[0]
+
+	// Такой вот костыль из-за того, что в url может быть как product, так и bundles
+	for _, category := range categories {
+		if category["path"] == ProductType[1] {
+			gameCategory = ProductType[1]
+		}
+	}
+
+	return fmt.Sprintf("%s%s/%s", GameLink, gameCategory, slug)
 }
 
 func GetMonth(month time.Month) string {
@@ -100,7 +120,9 @@ func GetGiveaway() Giveaway {
 	log.Println("Selecting games we need to post")
 	for _, rGame := range rGames {
 		var localGameStruct = Game{}
-		localGameStruct.Title = rGame.Title // Название
+		var dates PromotionalOffer
+
+		localGameStruct.Title = rGame.Title // Название игры
 
 		// Находим даты начала и окончания раздачи
 		if len(rGame.Promotions.Current) > 0 {
@@ -114,43 +136,34 @@ func GetGiveaway() Giveaway {
 			}
 
 			localGameStruct.IsAvailable = true
-			dates := rGame.Promotions.Current[0]["promotionalOffers"][0]
-
-			localGameStruct.Date.Start, _ = time.ParseInLocation(
-				time.RFC3339,
-				dates.StartDate,
-				moscowLoc)
-			localGameStruct.Date.End, _ = time.ParseInLocation(
-				time.RFC3339,
-				dates.EndDate,
-				moscowLoc)
+			dates = rGame.Promotions.Current[0]["promotionalOffers"][0]
 		} else {
 			if rGame.Promotions.Upcoming == nil {
 				continue
 			}
 
 			localGameStruct.IsAvailable = false
-			dates := rGame.Promotions.Upcoming[0]["promotionalOffers"][0]
-
-			localGameStruct.Date.Start, _ = time.ParseInLocation(
-				time.RFC3339,
-				dates.StartDate,
-				moscowLoc)
-			localGameStruct.Date.End, _ = time.ParseInLocation(
-				time.RFC3339,
-				dates.EndDate,
-				moscowLoc)
+			dates = rGame.Promotions.Upcoming[0]["promotionalOffers"][0]
 		}
 
-		// Устанавливаем время до следующей раздачи, а если находим раньше текущего - перезаписываем
-		if !localGameStruct.IsAvailable &&
-			(ga.Next.IsZero() || localGameStruct.Date.Start.Before(ga.Next)) {
-			ga.Next = localGameStruct.Date.Start
-		}
+		// Парсим даты по московскому времени
+		localGameStruct.Date.Start, _ = time.ParseInLocation(
+			time.RFC3339,
+			dates.StartDate,
+			moscowLoc)
+		localGameStruct.Date.End, _ = time.ParseInLocation(
+			time.RFC3339,
+			dates.EndDate,
+			moscowLoc)
 
 		// В результате будут только игры с текущей раздачи
 		if !localGameStruct.IsAvailable {
 			continue
+		}
+
+		// Устанавливаем время до следующей раздачи, а если находим раньше текущего - перезаписываем
+		if ga.Next.IsZero() || localGameStruct.Date.Start.Before(ga.Next) {
+			ga.Next = localGameStruct.Date.Start
 		}
 
 		/**
@@ -166,8 +179,8 @@ func GetGiveaway() Giveaway {
 			return rGame.Image[i]["type"] == "Thumbnail"
 		})
 
-		localGameStruct.Image = rGame.Image[0]["url"]      // Обложка
-		localGameStruct.Url = GameLink + rGame.ProductSlug // Ссылка на страницу игры
+		localGameStruct.Image = rGame.Image[0]["url"]                      // Обложка
+		localGameStruct.Url = GetLink(rGame.ProductSlug, rGame.Categories) // Ссылка на страницу игры
 
 		// Данный массив может меняться, поэтому ищем нужную информацию таким способом
 		for _, gameInfo := range rGame.GameInfo {
