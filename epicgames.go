@@ -120,7 +120,9 @@ func GetGiveaway() Giveaway {
 	log.Println("Selecting games we need to post")
 	for _, rGame := range rGames {
 		var localGameStruct = Game{}
-		localGameStruct.Title = rGame.Title // Название
+		var dates PromotionalOffer
+
+		localGameStruct.Title = rGame.Title // Название игры
 
 		// Находим даты начала и окончания раздачи
 		if len(rGame.Promotions.Current) > 0 {
@@ -134,43 +136,34 @@ func GetGiveaway() Giveaway {
 			}
 
 			localGameStruct.IsAvailable = true
-			dates := rGame.Promotions.Current[0]["promotionalOffers"][0]
-
-			localGameStruct.Date.Start, _ = time.ParseInLocation(
-				time.RFC3339,
-				dates.StartDate,
-				moscowLoc)
-			localGameStruct.Date.End, _ = time.ParseInLocation(
-				time.RFC3339,
-				dates.EndDate,
-				moscowLoc)
+			dates = rGame.Promotions.Current[0]["promotionalOffers"][0]
 		} else {
 			if rGame.Promotions.Upcoming == nil {
 				continue
 			}
 
 			localGameStruct.IsAvailable = false
-			dates := rGame.Promotions.Upcoming[0]["promotionalOffers"][0]
-
-			localGameStruct.Date.Start, _ = time.ParseInLocation(
-				time.RFC3339,
-				dates.StartDate,
-				moscowLoc)
-			localGameStruct.Date.End, _ = time.ParseInLocation(
-				time.RFC3339,
-				dates.EndDate,
-				moscowLoc)
+			dates = rGame.Promotions.Upcoming[0]["promotionalOffers"][0]
 		}
 
-		// Устанавливаем время до следующей раздачи, а если находим раньше текущего - перезаписываем
-		if !localGameStruct.IsAvailable &&
-			(ga.Next.IsZero() || localGameStruct.Date.Start.Before(ga.Next)) {
-			ga.Next = localGameStruct.Date.Start
-		}
+		// Парсим даты по московскому времени
+		localGameStruct.Date.Start, _ = time.ParseInLocation(
+			time.RFC3339,
+			dates.StartDate,
+			moscowLoc)
+		localGameStruct.Date.End, _ = time.ParseInLocation(
+			time.RFC3339,
+			dates.EndDate,
+			moscowLoc)
 
 		// В результате будут только игры с текущей раздачи
 		if !localGameStruct.IsAvailable {
 			continue
+		}
+
+		// Устанавливаем время до следующей раздачи, а если находим раньше текущего - перезаписываем
+		if ga.Next.IsZero() || localGameStruct.Date.Start.Before(ga.Next) {
+			ga.Next = localGameStruct.Date.Start
 		}
 
 		/**
