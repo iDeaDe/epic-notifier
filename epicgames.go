@@ -156,14 +156,10 @@ func GetGiveaway() Giveaway {
 			dates.EndDate,
 			moscowLoc)
 
-		// В результате будут только игры с текущей раздачи
-		if !localGameStruct.IsAvailable {
-			continue
-		}
-
 		// Устанавливаем время до следующей раздачи, а если находим раньше текущего - перезаписываем
-		if ga.Next.IsZero() || localGameStruct.Date.Start.Before(ga.Next) {
+		if !localGameStruct.IsAvailable && (ga.Next.IsZero() || localGameStruct.Date.Start.Before(ga.Next)) {
 			ga.Next = localGameStruct.Date.Start
+			continue
 		}
 
 		/**
