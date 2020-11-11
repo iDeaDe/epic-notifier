@@ -11,7 +11,7 @@ func main() {
 	var postCurrent bool
 	var silent bool
 
-	flag.BoolVar(&postCurrent, "c", true, "Specify to not post current games.")
+	flag.BoolVar(&postCurrent, "c", true, "Specify to not post current 	games.")
 	flag.BoolVar(&silent, "s", false, "Specify to post games silently.")
 	flag.Parse()
 
@@ -24,6 +24,12 @@ func main() {
 
 	for {
 		ga := GetGiveaway()
+		nextGiveaway := ga.Next
+
+		if time.Now().After(nextGiveaway) && time.Now().Before(time.Now().AddDate(0, 0, -7)) {
+			nextGiveaway = time.Now().Add(time.Hour * 24 * 3)
+			postCurrent = false
+		}
 
 		if postCurrent {
 			for _, game := range ga.Games {
@@ -31,9 +37,11 @@ func main() {
 				tg.Post(&game, silent)
 			}
 		} else {
-			postCurrent = false
+			postCurrent = true
+			log.Println("Nothing to post")
 		}
 
+		log.Println("Next giveaway:", nextGiveaway.String())
 		time.Sleep(time.Until(ga.Next.Add(time.Second * 5)))
 	}
 }

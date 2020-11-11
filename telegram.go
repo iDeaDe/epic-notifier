@@ -38,7 +38,6 @@ func (tg *TelegramSettings) Post(game *Game, silent bool) {
 	keyboard := make(map[string][2][1]KeyBoardButton)
 	keyboard["inline_keyboard"] = [2][1]KeyBoardButton{shopButton, moreGamesButton}
 	linkButton, _ := json.Marshal(keyboard)
-	log.Println(linkButton)
 
 	reqUrl, _ := url.Parse(ApiUrl)
 	reqUrl.Path = "bot" + tg.Token + "/sendPhoto"
@@ -70,8 +69,6 @@ func (tg *TelegramSettings) Post(game *Game, silent bool) {
 		fmt.Sprintf("%d %s",
 			game.Date.End.Day(),
 			GetMonth(game.Date.End.Month())))
-			
-	log.Println(messageText)
 
 	qVal.Add("caption", strings.ReplaceAll(messageText, ".", "\\."))
 
