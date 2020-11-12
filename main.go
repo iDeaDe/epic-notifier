@@ -10,9 +10,11 @@ import (
 func main() {
 	var postCurrent bool
 	var silent bool
+	var testChannel string
 
 	flag.BoolVar(&postCurrent, "c", true, "Specify to not post current 	games.")
 	flag.BoolVar(&silent, "s", false, "Specify to post games silently.")
+	flag.StringVar(&testChannel, "test", "", "Post to the test channel")
 	flag.Parse()
 
 	config := GetConfig("config.yaml")
@@ -21,6 +23,9 @@ func main() {
 	tg := new(TelegramSettings)
 	tg.Token = telegramToken
 	tg.ChannelName = config.Channel
+	if testChannel != "" {
+		tg.ChannelName = testChannel
+	}
 
 	for {
 		ga := GetGiveaway()
