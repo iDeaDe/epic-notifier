@@ -101,14 +101,14 @@ func GetGiveaway() Giveaway {
 	log.Println("Fetching new games from Epic Games API")
 	resp, err := http.Get(EpicLink)
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
 
 	log.Println("Decoding JSON")
 	responseData := new(Data)
 	err = json.NewDecoder(resp.Body).Decode(responseData)
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
 	_ = resp.Body.Close()
 
@@ -156,9 +156,12 @@ func GetGiveaway() Giveaway {
 			dates.EndDate,
 			moscowLoc)
 
-		// Устанавливаем время до следующей раздачи, а если находим раньше текущего - перезаписываем
-		if !localGameStruct.IsAvailable && (ga.Next.IsZero() || localGameStruct.Date.Start.Before(ga.Next)) {
-			ga.Next = localGameStruct.Date.Start
+		if !localGameStruct.IsAvailable {
+			// Устанавливаем время до следующей раздачи, а если находим раньше текущего - перезаписываем
+			if ga.Next.IsZero() || localGameStruct.Date.Start.Before(ga.Next) {
+				ga.Next = localGameStruct.Date.Start
+			}
+
 			continue
 		}
 
