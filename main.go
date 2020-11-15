@@ -4,6 +4,7 @@ import (
 	"flag"
 	"log"
 	"os"
+	"path"
 	"time"
 )
 
@@ -12,10 +13,21 @@ func main() {
 	var silent bool
 	var testChannel string
 
-	flag.BoolVar(&postCurrent, "c", true, "Specify to not post current 	games.")
+	flag.BoolVar(&postCurrent, "c", true, "Specify to not post current games.")
 	flag.BoolVar(&silent, "s", false, "Specify to post games silently.")
 	flag.StringVar(&testChannel, "test", "", "Post to the test channel")
 	flag.Parse()
+
+	// Для systemd
+	executable, err := os.Executable()
+	if err != nil {
+		log.Panicln(err)
+	}
+	execPath := path.Dir(executable)
+	err = os.Chdir(execPath)
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	config := GetConfig("config.yaml")
 
