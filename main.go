@@ -18,7 +18,9 @@ func main() {
 	flag.StringVar(&testChannel, "test", "", "Post to the test channel")
 	flag.Parse()
 
-	// Для systemd
+	/*
+		Смена директории для того, чтобы конфиг создавался рядом с исполняемым файлом
+	*/
 	executable, err := os.Executable()
 	if err != nil {
 		log.Panicln(err)
