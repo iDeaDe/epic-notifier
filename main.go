@@ -34,6 +34,11 @@ func main() {
 	config := GetConfig("config.yaml")
 
 	telegramToken := os.Getenv("TELEGRAM_TOKEN")
+
+	if telegramToken == "" {
+		log.Panicln("TELEGRAM_TOKEN not found")
+	}
+
 	tg := new(TelegramSettings)
 	tg.Token = telegramToken
 	tg.ChannelName = config.Channel

@@ -21,6 +21,10 @@ type KeyBoardButton struct {
 	Url  string `json:"url"`
 }
 
+func (tg *TelegramSettings) ShowNewPosts() {
+
+}
+
 func (tg *TelegramSettings) Post(game *Game, silent bool) {
 	log.Println("Building keyboard buttons")
 	// Интерактивные кнопки внизу поста
@@ -81,6 +85,9 @@ func (tg *TelegramSettings) Post(game *Game, silent bool) {
 	}
 
 	if err != nil || resp.StatusCode != 200 {
+		if resp != nil {
+			log.Println(resp.StatusCode)
+		}
 		log.Fatal(err)
 	}
 }
