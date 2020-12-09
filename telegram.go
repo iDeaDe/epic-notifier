@@ -21,12 +21,21 @@ type KeyBoardButton struct {
 	Url  string `json:"url"`
 }
 
-func (tg *TelegramSettings) ShowNewPosts() {
+var Reserved = map[string]string{
+	"<": "&lt;",
+	">": "&gt;",
+	"&": "&amp;",
+}
 
+func EscapeString(text *string) {
+	for search, replace := range Reserved {
+		*text = strings.ReplaceAll(*text, search, replace)
+	}
 }
 
 func (tg *TelegramSettings) Post(game *Game, silent bool) {
 	log.Println("Building keyboard buttons")
+
 	// Интерактивные кнопки внизу поста
 	var shopButton [1]KeyBoardButton
 	shopButton[0] = KeyBoardButton{
@@ -38,17 +47,18 @@ func (tg *TelegramSettings) Post(game *Game, silent bool) {
 		Text: "Больше бесплатных игр",
 		Url:  "https://www.epicgames.com/store/ru/free-games",
 	}
-
 	keyboard := make(map[string][2][1]KeyBoardButton)
 	keyboard["inline_keyboard"] = [2][1]KeyBoardButton{shopButton, moreGamesButton}
 	linkButton, _ := json.Marshal(keyboard)
 
 	reqUrl, _ := url.Parse(ApiUrl)
 	reqUrl.Path = "bot" + tg.Token + "/sendPhoto"
+
+	// Параметры для запроса к Telegram API
 	qVal := reqUrl.Query()
 	qVal.Add("chat_id", tg.ChannelName)
 	qVal.Add("photo", game.Image)
-	qVal.Add("parse_mode", "MarkdownV2")
+	qVal.Add("parse_mode", "HTML")
 	qVal.Add("reply_markup", string(linkButton))
 	if silent {
 		qVal.Add("disable_notification", "True")
@@ -57,16 +67,20 @@ func (tg *TelegramSettings) Post(game *Game, silent bool) {
 	publisher := ""
 	developer := ""
 
+	EscapeString(&game.Title)
+	EscapeString(&game.Publisher)
+	EscapeString(&game.Developer)
+
 	if game.Publisher != "" {
-		publisher = fmt.Sprintf("Издатель: *%s*\n", game.Publisher)
+		publisher = fmt.Sprintf("Издатель: <b>%s</b>\n", game.Publisher)
 	}
 
 	if game.Developer != "" {
-		developer = fmt.Sprintf("Разработчик: *%s*\n", game.Developer)
+		developer = fmt.Sprintf("Разработчик: <b>%s</b>\n", game.Developer)
 	}
 
 	messageText := fmt.Sprintf(
-		"*Раздаётся игра %s*\n\n%s%s\nИгра доступна бесплатно до %s",
+		"<b>Раздаётся игра %s</b>\n\n%s%s\nИгра доступна бесплатно до %s",
 		game.Title,
 		publisher,
 		developer,
@@ -74,7 +88,7 @@ func (tg *TelegramSettings) Post(game *Game, silent bool) {
 			game.Date.End.Day(),
 			GetMonth(game.Date.End.Month())))
 
-	qVal.Add("caption", strings.ReplaceAll(messageText, ".", "\\."))
+	qVal.Add("caption", messageText)
 
 	reqUrl.RawQuery = qVal.Encode()
 

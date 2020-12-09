@@ -11,10 +11,16 @@ type Config struct {
 	Channel string `yaml:"channel"`
 }
 
+var defaultConfig = Config{
+	Channel: "@epicgiveaways",
+}
+
 func GetConfig(filename string) *Config {
 	cfgFile, err := os.OpenFile(filename, os.O_RDONLY, os.ModePerm)
+
 	if os.IsNotExist(err) {
-		cfgFile = createDefaultConfig(filename)
+		createDefaultConfig(filename)
+		return &defaultConfig
 	} else if err != nil {
 		log.Panicf("Can't open the config file.\nError: %v", err)
 	}
@@ -41,15 +47,12 @@ func GetConfig(filename string) *Config {
 	return config
 }
 
-func createDefaultConfig(filename string) *os.File {
-	defaultConfig := Config{
-		Channel: "@epicgiveaways",
-	}
-
+func createDefaultConfig(filename string) {
 	file, err := os.Create(filename)
 	if err != nil {
 		log.Panicf("Can't create the config file.\nError: %v", err)
 	}
+	defer file.Close()
 
 	content, err := yaml.Marshal(defaultConfig)
 	if err != nil {
@@ -60,6 +63,4 @@ func createDefaultConfig(filename string) *os.File {
 	if err != nil {
 		log.Panicln("Seems like config file is unwritable")
 	}
-
-	return file
 }
