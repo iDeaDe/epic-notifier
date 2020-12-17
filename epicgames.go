@@ -48,7 +48,17 @@ type RawGame struct {
 	GameInfo    []map[string]string `json:"customAttributes"`
 	ProductSlug string              `json:"productSlug"`
 	Categories  []map[string]string `json:"categories"`
-	Promotions  struct {
+	Price       struct {
+		Total struct {
+			Discount int `json:"discountPrice"`
+			Original int `json:"originalPrice"`
+
+			Currency struct {
+				Decimals int `json:"decimals"`
+			} `json:"currencyInfo"`
+		} `json:"totalPrice"`
+	} `json:"price"`
+	Promotions struct {
 		Current  []map[string][]PromotionalOffer `json:"promotionalOffers"`
 		Upcoming []map[string][]PromotionalOffer `json:"upcomingPromotionalOffers"`
 	} `json:"promotions"`
@@ -94,7 +104,7 @@ func GetMonth(month time.Month) string {
 	return Months[month-1]
 }
 
-func GetGiveaway() Giveaway {
+func GetGiveaway() *Giveaway {
 	var games []Game
 	ga := new(Giveaway)
 
@@ -119,6 +129,14 @@ func GetGiveaway() Giveaway {
 	// Собираем игры из ответа сервера
 	log.Println("Selecting games we need to post")
 	for _, rGame := range rGames {
+		decimals := rGame.Price.Total.Currency.Decimals * 10
+		discountPrice := rGame.Price.Total.Discount / decimals
+		originalPrice := rGame.Price.Total.Original / decimals
+
+		if !(discountPrice == 0 || originalPrice == 0) {
+			continue
+		}
+
 		var localGameStruct = Game{}
 		var dates PromotionalOffer
 
@@ -203,5 +221,5 @@ func GetGiveaway() Giveaway {
 
 	ga.Games = games
 
-	return *ga
+	return ga
 }

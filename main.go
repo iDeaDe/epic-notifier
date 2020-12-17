@@ -45,9 +45,10 @@ func main() {
 	if testChannel != "" {
 		tg.ChannelName = testChannel
 	}
+	var ga *Giveaway
 
 	for {
-		ga := GetGiveaway()
+		ga = GetGiveaway()
 		nextGiveaway := ga.Next
 
 		if time.Now().After(nextGiveaway) && time.Now().Before(time.Now().AddDate(0, 0, -7)) {
@@ -65,7 +66,9 @@ func main() {
 			log.Println("Nothing to post")
 		}
 
+		ga = nil
+
 		log.Println("Next giveaway:", nextGiveaway.String())
-		time.Sleep(time.Until(ga.Next.Add(time.Second * 5)))
+		time.Sleep(time.Until(nextGiveaway.Add(time.Second * 5)))
 	}
 }
