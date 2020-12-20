@@ -142,6 +142,10 @@ func GetGiveaway() *Giveaway {
 
 		localGameStruct.Title = rGame.Title // Название игры
 
+		if len(rGame.Promotions.Current) == 0 && len(rGame.Promotions.Upcoming) == 0 {
+			continue
+		}
+
 		// Находим даты начала и окончания раздачи
 		if len(rGame.Promotions.Current) > 0 {
 			/**
