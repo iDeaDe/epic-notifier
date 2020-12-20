@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime"
 	"time"
 )
 
@@ -31,7 +32,7 @@ func main() {
 		log.Panicln(err)
 	}
 
-	config := GetConfig("config.yaml")
+	config := GetConfig("config.json")
 
 	telegramToken := os.Getenv("TELEGRAM_TOKEN")
 
@@ -45,9 +46,9 @@ func main() {
 	if testChannel != "" {
 		tg.ChannelName = testChannel
 	}
-	var ga *Giveaway
 
 	for {
+		ga := new(Giveaway)
 		ga = GetGiveaway()
 		nextGiveaway := ga.Next
 
@@ -67,6 +68,7 @@ func main() {
 		}
 
 		ga = nil
+		runtime.GC()
 
 		log.Println("Next giveaway:", nextGiveaway.String())
 		time.Sleep(time.Until(nextGiveaway.Add(time.Second * 5)))

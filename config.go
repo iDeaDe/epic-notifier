@@ -1,18 +1,17 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"os"
-
-	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	Channel string `yaml:"channel"`
+	Channel string `json:"channel"`
 }
 
 var defaultConfig = Config{
-	Channel: "@epicgiveaways",
+	Channel: "@keklolch",
 }
 
 func GetConfig(filename string) *Config {
@@ -38,7 +37,7 @@ func GetConfig(filename string) *Config {
 	_, err = cfgFile.Read(fileContent)
 
 	config := new(Config)
-	err = yaml.Unmarshal(fileContent, config)
+	err = json.Unmarshal(fileContent, config)
 	// todo: fix this shit
 	if err != nil {
 		log.Panicf("Error in unmarshal config.\n%v", err)
@@ -54,7 +53,7 @@ func createDefaultConfig(filename string) {
 	}
 	defer file.Close()
 
-	content, err := yaml.Marshal(defaultConfig)
+	content, err := json.Marshal(defaultConfig)
 	if err != nil {
 		log.Panicf("Can't marshal default config.\nError: %v", err)
 	}
