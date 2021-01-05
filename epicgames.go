@@ -133,10 +133,6 @@ func GetGiveaway() *Giveaway {
 		discountPrice := rGame.Price.Total.Discount / decimals
 		originalPrice := rGame.Price.Total.Original / decimals
 
-		if !(discountPrice == 0 || originalPrice == 0) {
-			continue
-		}
-
 		var localGameStruct = Game{}
 		var dates PromotionalOffer
 
@@ -177,6 +173,10 @@ func GetGiveaway() *Giveaway {
 			time.RFC3339,
 			dates.EndDate,
 			moscowLoc)
+
+		if !(discountPrice == 0 || originalPrice == 0) && localGameStruct.IsAvailable {
+			continue
+		}
 
 		if !localGameStruct.IsAvailable {
 			// Устанавливаем время до следующей раздачи, а если находим раньше текущего - перезаписываем

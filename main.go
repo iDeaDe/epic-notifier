@@ -52,7 +52,7 @@ func main() {
 		ga = GetGiveaway()
 		nextGiveaway := ga.Next
 
-		if time.Now().After(nextGiveaway) && time.Now().Before(time.Now().AddDate(0, 0, -7)) {
+		if time.Now().After(nextGiveaway) && nextGiveaway.Before(time.Now()) {
 			nextGiveaway = time.Now().Add(time.Hour * 24 * 3)
 			postCurrent = false
 		}
