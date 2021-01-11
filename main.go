@@ -102,7 +102,7 @@ func main() {
 				}
 				break
 			} else {
-				time.Sleep(time.Second * 10)
+				time.Sleep(time.Hour)
 			}
 
 			ga = epicgames.GetGiveaway()
