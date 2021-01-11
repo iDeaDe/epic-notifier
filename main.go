@@ -90,6 +90,7 @@ func main() {
 		log.Printf("Next giveaway post ID: %d\n", config.Content.NextPostId)
 
 		ga = nil
+		recreateNext = true
 		runtime.GC()
 
 		for {
