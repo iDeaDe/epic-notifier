@@ -41,7 +41,7 @@ func EscapeString(text *string) {
 	}
 }
 
-func (tg *TelegramSettings) Send(req *Request) (io.ReadCloser, error) {
+func (tg *TelegramSettings) Send(req *Request) (*http.Response, error) {
 	// Собираем ссылку из параметров запроса
 	reqUrl, _ := url.Parse(ApiUrl)
 	reqUrl.Path = "bot" + tg.Token + "/" + req.Name
@@ -70,11 +70,6 @@ func (tg *TelegramSettings) Send(req *Request) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	if resp.StatusCode != 200 {
-		return nil, errors.New(resp.Status)
-	}
 
-	result := resp.Body
-
-	return result, nil
+	return resp, nil
 }
