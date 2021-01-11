@@ -43,7 +43,7 @@ func formatPostText(games *[]epicgames.Game, nextGiveawayTime time.Time) string 
 	return messageText
 }
 
-func (tg *TelegramSettings) RemoveNextPost(messageId string) {
+func (tg *TelegramSettings) RemoveNextPost(messageId string) error {
 	queryParams := map[string]string{
 		"chat_id":    tg.ChannelName,
 		"message_id": messageId,
@@ -59,8 +59,9 @@ func (tg *TelegramSettings) RemoveNextPost(messageId string) {
 	_, err := tg.Send(&req)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+	return nil
 }
 
 func (tg *TelegramSettings) UpdateNext(messageId string, ga *epicgames.Giveaway) {

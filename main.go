@@ -51,7 +51,10 @@ func main() {
 		tg.ChannelName = testChannel
 	}
 
-	tg.RemoveNextPost(strconv.Itoa(config.Content.NextPostId))
+	err = tg.RemoveNextPost(strconv.Itoa(config.Content.NextPostId))
+	if err != nil {
+		log.Println(err)
+	}
 
 	for {
 		ga := new(epicgames.Giveaway)
@@ -85,7 +88,10 @@ func main() {
 			nextPostInt := strconv.Itoa(config.Content.NextPostId)
 			if time.Until(nextGiveaway.Add(time.Second*5)).Hours() < 2 {
 				time.Sleep(time.Until(nextGiveaway.Add(time.Second * 5)))
-				tg.RemoveNextPost(nextPostInt)
+				err = tg.RemoveNextPost(nextPostInt)
+				if err != nil {
+					log.Println(err)
+				}
 				break
 			} else {
 				time.Sleep(time.Hour)
