@@ -6,20 +6,46 @@ import (
 	"os"
 )
 
+type ConfigFile struct {
+	Name    string
+	Content *Config
+}
+
 type Config struct {
-	Channel string `json:"channel"`
+	Channel    string `json:"channel"`
+	NextPostId int    `json:"next_post_id"`
 }
 
 var defaultConfig = Config{
-	Channel: "@keklolch",
+	Channel:    "",
+	NextPostId: 0,
 }
 
-func GetConfig(filename string) *Config {
-	cfgFile, err := os.OpenFile(filename, os.O_RDONLY, os.ModePerm)
+func (file *ConfigFile) SaveConfig() error {
+	cfgFile, err := os.OpenFile(file.Name, os.O_WRONLY, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	content, err := json.Marshal(file.Content)
+	if err != nil {
+		return err
+	}
+	_, err = cfgFile.Write(content)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (file *ConfigFile) GetConfig() {
+	cfgFile, err := os.OpenFile(file.Name, os.O_RDONLY, os.ModePerm)
 
 	if os.IsNotExist(err) {
-		createDefaultConfig(filename)
-		return &defaultConfig
+		createDefaultConfig(file.Name)
+		defaultCopy := defaultConfig
+		file.Content = &defaultCopy
+		return
 	} else if err != nil {
 		log.Panicf("Can't open the config file.\nError: %v", err)
 	}
@@ -38,12 +64,10 @@ func GetConfig(filename string) *Config {
 
 	config := new(Config)
 	err = json.Unmarshal(fileContent, config)
-	// todo: fix this shit
 	if err != nil {
 		log.Panicf("Error in unmarshal config.\n%v", err)
 	}
-
-	return config
+	file.Content = config
 }
 
 func createDefaultConfig(filename string) {
@@ -62,4 +86,7 @@ func createDefaultConfig(filename string) {
 	if err != nil {
 		log.Panicln("Seems like config file is unwritable")
 	}
+
+	log.Printf("Fill all fields in created config file(%s)\n", filename)
+	os.Exit(0)
 }

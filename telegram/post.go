@@ -1,39 +1,18 @@
-package main
+package telegram
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/ideade/epic-notifier/epicgames"
 	"log"
-	"net/http"
-	"net/url"
-	"strings"
 )
-
-const ApiUrl = "https://api.telegram.org/"
-
-type TelegramSettings struct {
-	Token       string
-	ChannelName string
-}
 
 type KeyBoardButton struct {
 	Text string `json:"text"`
 	Url  string `json:"url"`
 }
 
-var Reserved = map[string]string{
-	"<": "&lt;",
-	">": "&gt;",
-	"&": "&amp;",
-}
-
-func EscapeString(text *string) {
-	for search, replace := range Reserved {
-		*text = strings.ReplaceAll(*text, search, replace)
-	}
-}
-
-func (tg *TelegramSettings) Post(game *Game, silent bool) {
+func (tg *TelegramSettings) Post(game *epicgames.Game, silent bool) {
 	log.Println("Building keyboard buttons")
 
 	// Интерактивные кнопки внизу поста
@@ -50,19 +29,6 @@ func (tg *TelegramSettings) Post(game *Game, silent bool) {
 	keyboard := make(map[string][2][1]KeyBoardButton)
 	keyboard["inline_keyboard"] = [2][1]KeyBoardButton{shopButton, moreGamesButton}
 	linkButton, _ := json.Marshal(keyboard)
-
-	reqUrl, _ := url.Parse(ApiUrl)
-	reqUrl.Path = "bot" + tg.Token + "/sendPhoto"
-
-	// Параметры для запроса к Telegram API
-	qVal := reqUrl.Query()
-	qVal.Add("chat_id", tg.ChannelName)
-	qVal.Add("photo", game.Image)
-	qVal.Add("parse_mode", "HTML")
-	qVal.Add("reply_markup", string(linkButton))
-	if silent {
-		qVal.Add("disable_notification", "True")
-	}
 
 	publisher := ""
 	developer := ""
@@ -86,22 +52,29 @@ func (tg *TelegramSettings) Post(game *Game, silent bool) {
 		developer,
 		fmt.Sprintf("%d %s",
 			game.Date.End.Day(),
-			GetMonth(game.Date.End.Month())))
+			epicgames.GetMonth(game.Date.End.Month())))
 
-	qVal.Add("caption", messageText)
-
-	reqUrl.RawQuery = qVal.Encode()
-
-	log.Println("Sending request to the Telegram API, request URL")
-	resp, err := http.Get(reqUrl.String())
-	if resp != nil {
-		defer resp.Body.Close()
+	queryParams := map[string]string{
+		"chat_id":      tg.ChannelName,
+		"photo":        game.Image,
+		"parse_mode":   "HTML",
+		"reply_markup": string(linkButton),
+		"caption":      messageText,
+	}
+	if silent {
+		queryParams["disable_notification"] = "True"
+	}
+	req := Request{
+		Method: MethodGet,
+		Name:   "sendPhoto",
+		Params: &queryParams,
+		Body:   nil,
 	}
 
-	if err != nil || resp.StatusCode != 200 {
-		if resp != nil {
-			log.Println(resp.StatusCode)
-		}
+	log.Println("Sending request to the Telegram API, request URL")
+	_, err := tg.Send(&req)
+
+	if err != nil {
 		log.Fatal(err)
 	}
 }

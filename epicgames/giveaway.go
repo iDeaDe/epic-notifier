@@ -1,10 +1,7 @@
-package main
+package epicgames
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
-	"net/http"
 	"sort"
 	"time"
 )
@@ -12,29 +9,10 @@ import (
 const EpicLink = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=RU&allowCountries=RU"
 const GameLink = "https://www.epicgames.com/store/ru/"
 
-var Months = []string{
-	"января",
-	"февраля",
-	"марта",
-	"апреля",
-	"мая",
-	"июня",
-	"июля",
-	"августа",
-	"сентября",
-	"октября",
-	"ноября",
-	"декабря",
-}
-
-var ProductType = []string{
-	"product",
-	"bundles",
-}
-
 type Giveaway struct {
-	Games []Game
-	Next  time.Time
+	CurrentGames []Game
+	NextGames    []Game
+	Next         time.Time
 }
 
 type PromotionalOffer struct {
@@ -69,7 +47,11 @@ type Game struct {
 	Publisher   string
 	Developer   string
 	IsAvailable bool
-	Date        struct {
+	Price       struct {
+		Discount int
+		Original int
+	}
+	Date struct {
 		Start time.Time
 		End   time.Time
 	}
@@ -87,47 +69,17 @@ type Data struct {
 	} `json:"data"`
 }
 
-func GetLink(slug string, categories []map[string]string) string {
-	gameCategory := ProductType[0]
-
-	// Такой вот костыль из-за того, что в url может быть как product, так и bundles
-	for _, category := range categories {
-		if category["path"] == ProductType[1] {
-			gameCategory = ProductType[1]
-		}
-	}
-
-	return fmt.Sprintf("%s%s/%s", GameLink, gameCategory, slug)
-}
-
-func GetMonth(month time.Month) string {
-	return Months[month-1]
-}
-
 func GetGiveaway() *Giveaway {
-	var games []Game
+	var currentGames []Game
+	var nextGames []Game
 	ga := new(Giveaway)
-
-	log.Println("Fetching new games from Epic Games API")
-	resp, err := http.Get(EpicLink)
-	if err != nil {
-		log.Panicln(err)
-	}
-
-	log.Println("Decoding JSON")
-	responseData := new(Data)
-	err = json.NewDecoder(resp.Body).Decode(responseData)
-	if err != nil {
-		log.Panicln(err)
-	}
-	_ = resp.Body.Close()
 
 	// Выкладывать будем по московскому времени
 	moscowLoc, _ := time.LoadLocation("Europe/Moscow")
-	rGames := responseData.Data.Catalog.SearchStore.Elements
+	rGames := GetGames()
 
 	// Собираем игры из ответа сервера
-	log.Println("Selecting games we need to post")
+	log.Println("Converting raw information to structures")
 	for _, rGame := range rGames {
 		decimals := rGame.Price.Total.Currency.Decimals * 10
 		discountPrice := rGame.Price.Total.Discount / decimals
@@ -144,10 +96,10 @@ func GetGiveaway() *Giveaway {
 
 		// Находим даты начала и окончания раздачи
 		if len(rGame.Promotions.Current) > 0 {
-			/**
-			Эпик продолжает вставлять палки в колёса
-			Пришлось добавить ещё и такую проверку
-			Что же будет дальше?
+			/*
+				Эпик продолжает вставлять палки в колёса
+				Пришлось добавить ещё и такую проверку
+				Что же будет дальше?
 			*/
 			if rGame.Promotions.Current == nil {
 				continue
@@ -183,8 +135,6 @@ func GetGiveaway() *Giveaway {
 			if ga.Next.IsZero() || localGameStruct.Date.Start.Before(ga.Next) {
 				ga.Next = localGameStruct.Date.Start
 			}
-
-			continue
 		}
 
 		/**
@@ -220,10 +170,15 @@ func GetGiveaway() *Giveaway {
 			}
 		}
 
-		games = append(games, localGameStruct)
+		if localGameStruct.IsAvailable {
+			currentGames = append(currentGames, localGameStruct)
+		} else {
+			nextGames = append(nextGames, localGameStruct)
+		}
 	}
 
-	ga.Games = games
+	ga.CurrentGames = currentGames
+	ga.NextGames = nextGames
 
 	return ga
 }
