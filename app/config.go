@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/json"
@@ -7,7 +7,7 @@ import (
 )
 
 type ConfigFile struct {
-	Name    string
+	Path    string
 	Content *Config
 }
 
@@ -22,7 +22,7 @@ var defaultConfig = Config{
 }
 
 func (file *ConfigFile) SaveConfig() error {
-	cfgFile, err := os.OpenFile(file.Name, os.O_WRONLY, os.ModePerm)
+	cfgFile, err := os.OpenFile(file.Path, os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -39,10 +39,10 @@ func (file *ConfigFile) SaveConfig() error {
 }
 
 func (file *ConfigFile) GetConfig() {
-	cfgFile, err := os.OpenFile(file.Name, os.O_RDONLY, os.ModePerm)
+	cfgFile, err := os.OpenFile(file.Path, os.O_RDONLY, os.ModePerm)
 
 	if os.IsNotExist(err) {
-		createDefaultConfig(file.Name)
+		createDefaultConfig(file.Path)
 		defaultCopy := defaultConfig
 		file.Content = &defaultCopy
 		return
@@ -70,8 +70,8 @@ func (file *ConfigFile) GetConfig() {
 	file.Content = config
 }
 
-func createDefaultConfig(filename string) {
-	file, err := os.Create(filename)
+func createDefaultConfig(filePath string) {
+	file, err := os.Create(filePath)
 	if err != nil {
 		log.Panicf("Can't create the config file.\nError: %v", err)
 	}
@@ -87,6 +87,6 @@ func createDefaultConfig(filename string) {
 		log.Panicln("Seems like config file is unwritable")
 	}
 
-	log.Printf("Fill all fields in created config file(%s)\n", filename)
+	log.Printf("Fill all fields in created config file(%s)\n", filePath)
 	os.Exit(0)
 }

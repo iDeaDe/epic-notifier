@@ -8,6 +8,7 @@ import (
 
 const EpicLink = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=RU&allowCountries=RU"
 const GameLink = "https://www.epicgames.com/store/ru/"
+const timeLayout = "2006-01-02T15:04:05"
 
 type Giveaway struct {
 	CurrentGames []Game
@@ -117,14 +118,15 @@ func GetGiveaway() *Giveaway {
 		}
 
 		// Парсим даты по московскому времени
-		localGameStruct.Date.Start, _ = time.ParseInLocation(
+		localGameStruct.Date.Start, _ = time.Parse(
 			time.RFC3339,
-			dates.StartDate,
-			moscowLoc)
-		localGameStruct.Date.End, _ = time.ParseInLocation(
+			dates.StartDate)
+		localGameStruct.Date.End, _ = time.Parse(
 			time.RFC3339,
-			dates.EndDate,
-			moscowLoc)
+			dates.EndDate)
+
+		localGameStruct.Date.Start = localGameStruct.Date.Start.In(moscowLoc)
+		localGameStruct.Date.End = localGameStruct.Date.End.In(moscowLoc)
 
 		if !(discountPrice == 0 || originalPrice == 0) && localGameStruct.IsAvailable {
 			continue
