@@ -2,7 +2,6 @@ package epicgames
 
 import (
 	"log"
-	"sort"
 	"time"
 )
 
@@ -146,11 +145,13 @@ func GetGiveaway() *Giveaway {
 		}
 
 		// Ищем обложку игры
-		sort.Slice(rGame.Image, func(i, _ int) bool {
-			return rGame.Image[i]["type"] == "Thumbnail"
-		})
+		for _, image := range rGame.Image {
+			if image["type"] == "Thumbnail" {
+				localGameStruct.Image = image["url"]
+				break
+			}
+		}
 
-		localGameStruct.Image = rGame.Image[0]["url"]                      // Обложка
 		localGameStruct.Url = GetLink(rGame.ProductSlug, rGame.Categories) // Ссылка на страницу игры
 
 		// Данный массив может меняться, поэтому ищем нужную информацию таким способом
