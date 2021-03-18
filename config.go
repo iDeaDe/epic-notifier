@@ -12,13 +12,15 @@ type ConfigFile struct {
 }
 
 type Config struct {
-	Channel    string `json:"channel"`
-	NextPostId int    `json:"next_post_id"`
+	Channel      string `json:"channel"`
+	NextPostId   int    `json:"next_post_id"`
+	RemindPostId int    `json:"remind_post_id"`
 }
 
 var defaultConfig = Config{
-	Channel:    "",
-	NextPostId: 0,
+	Channel:      "",
+	NextPostId:   -1,
+	RemindPostId: -1,
 }
 
 func (file *ConfigFile) SaveConfig() error {
