@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"encoding/json"
+	"github.com/ideade/epic-notifier/epicgames"
 	"log"
 )
 
@@ -34,11 +35,25 @@ func (tg *TelegramSettings) RemoveRemind(messageId string) error {
 	return nil
 }
 
-func (tg *TelegramSettings) Remind() int {
+func (tg *TelegramSettings) Remind(giveaway []epicgames.Game) int {
+	log.Println("Building keyboard buttons")
+	keyboard := make(map[string][][1]KeyBoardButton)
+
+	for _, game := range giveaway {
+		gameButton := KeyBoardButton{
+			Text: game.Title,
+			Url:  game.Url,
+		}
+
+		keyboard["inline_keyboard"] = append(keyboard["inline_keyboard"], [1]KeyBoardButton{gameButton})
+	}
+	linkButton, _ := json.Marshal(keyboard)
+
 	queryParams := map[string]string{
-		"chat_id":    tg.ChannelName,
-		"text":       "<b>Напоминание!</b>\n\nСегодня последний день раздачи.",
-		"parse_mode": "HTML",
+		"chat_id":      tg.ChannelName,
+		"text":         "<b>Напоминание!</b>\n\nСегодня последний день раздачи.",
+		"parse_mode":   "HTML",
+		"reply_markup": string(linkButton),
 	}
 	req := Request{
 		Method: MethodGet,

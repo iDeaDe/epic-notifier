@@ -130,6 +130,7 @@ func main() {
 		log.Printf("Next giveaway post ID: %d\n", config.Content.NextPostId)
 
 		recreateNext = true
+		remindSent = false
 		runtime.GC()
 
 		for {
@@ -137,7 +138,7 @@ func main() {
 			remindPostId := strconv.Itoa(config.Content.RemindPostId)
 
 			if !remindSent && time.Until(nextGiveaway).Hours() < 12 {
-				config.Content.RemindPostId = tg.Remind()
+				config.Content.RemindPostId = tg.Remind(ga.CurrentGames)
 				remindSent = true
 
 				_ = config.SaveConfig()
