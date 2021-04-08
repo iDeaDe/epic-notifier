@@ -137,7 +137,7 @@ func main() {
 			nextPostId := strconv.Itoa(config.Content.NextPostId)
 			remindPostId := strconv.Itoa(config.Content.RemindPostId)
 
-			if !remindSent && time.Until(nextGiveaway).Hours() < 12 {
+			if !remindSent && time.Until(nextGiveaway).Hours() < 6 {
 				config.Content.RemindPostId = tg.Remind(ga.CurrentGames)
 				remindSent = true
 
