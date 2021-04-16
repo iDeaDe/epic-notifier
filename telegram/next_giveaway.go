@@ -100,7 +100,7 @@ func (tg *TelegramSettings) PostNext(ga *epicgames.Giveaway) int {
 	for _, game := range ga.NextGames {
 		photo := InputMedia{
 			Type: "photo",
-			Url:  game.Url,
+			Url:  game.Image,
 		}
 
 		media = append(media, photo)
