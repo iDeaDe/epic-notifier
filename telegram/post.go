@@ -72,7 +72,10 @@ func (tg *TelegramSettings) Post(game *epicgames.Game, silent bool) {
 	}
 
 	log.Println("Sending request to the Telegram API, request URL")
-	_, err := tg.Send(&req)
+	resp, err := tg.Send(&req)
+
+	message := new(NewPostResponse)
+	_ = json.NewDecoder(resp.Body).Decode(&message)
 
 	if err != nil {
 		log.Fatal(err)

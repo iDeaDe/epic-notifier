@@ -146,13 +146,29 @@ func GetGiveaway() *Giveaway {
 
 		// Ищем обложку игры
 		for _, image := range rGame.Image {
-			if image["type"] == "Thumbnail" {
+			// Для тайных игр
+			if !localGameStruct.IsAvailable &&
+				len(rGame.Image) == 1 &&
+				image["type"] == "VaultClosed" {
+				localGameStruct.Image = image["url"]
+				break
+			}
+
+			if image["type"] == "DieselStoreFrontTall" {
 				localGameStruct.Image = image["url"]
 				break
 			}
 		}
 
-		localGameStruct.Url = GetLink(rGame.ProductSlug, rGame.Categories) // Ссылка на страницу игры
+		if localGameStruct.Image == "" && len(rGame.Image) == 1 {
+			localGameStruct.Image = rGame.Image[0]["url"]
+		}
+
+		if rGame.ProductSlug == "[]" {
+			localGameStruct.Url = "https://t.me/epicgiveaways"
+		} else {
+			localGameStruct.Url = GetLink(rGame.ProductSlug, rGame.Categories) // Ссылка на страницу игры
+		}
 
 		// Данный массив может меняться, поэтому ищем нужную информацию таким способом
 		for _, gameInfo := range rGame.GameInfo {

@@ -98,6 +98,11 @@ func (tg *TelegramSettings) PostNext(ga *epicgames.Giveaway) int {
 	var media []InputMedia
 
 	for _, game := range ga.NextGames {
+		log.Println(game)
+		if game.Image == "" {
+			continue
+		}
+
 		photo := InputMedia{
 			Type: "photo",
 			Url:  game.Image,
@@ -109,6 +114,8 @@ func (tg *TelegramSettings) PostNext(ga *epicgames.Giveaway) int {
 	if len(media) > 0 {
 		media[0].Caption = formatPostText(&ga.NextGames, ga.Next)
 		media[0].ParseMode = "HTML"
+	} else {
+		return -1
 	}
 
 	jsonMedia, _ := json.Marshal(media)
