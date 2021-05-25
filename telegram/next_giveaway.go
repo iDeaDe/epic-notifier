@@ -98,7 +98,6 @@ func (tg *TelegramSettings) PostNext(ga *epicgames.Giveaway) int {
 	var media []InputMedia
 
 	for _, game := range ga.NextGames {
-		log.Println(game)
 		if game.Image == "" {
 			continue
 		}
