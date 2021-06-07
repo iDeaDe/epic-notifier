@@ -24,10 +24,11 @@ var defaultConfig = Config{
 }
 
 func (file *ConfigFile) SaveConfig() error {
-	cfgFile, err := os.OpenFile(file.Name, os.O_TRUNC, os.ModePerm)
+	cfgFile, err := os.OpenFile(file.Name, os.O_WRONLY|os.O_TRUNC, os.ModePerm)
 	if err != nil {
 		return err
 	}
+	defer cfgFile.Close()
 
 	content, err := json.Marshal(file.Content)
 	if err != nil {
