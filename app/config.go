@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"encoding/json"
@@ -13,14 +13,14 @@ type ConfigFile struct {
 
 type Config struct {
 	Channel      string `json:"channel"`
-	NextPostId   int    `json:"next_post_id"`
-	RemindPostId int    `json:"remind_post_id"`
+	NextPostId   uint64 `json:"next_post_id"`
+	RemindPostId uint64 `json:"remind_post_id"`
 }
 
 var defaultConfig = Config{
 	Channel:      "",
-	NextPostId:   -1,
-	RemindPostId: -1,
+	NextPostId:   0,
+	RemindPostId: 0,
 }
 
 func (file *ConfigFile) SaveConfig() error {

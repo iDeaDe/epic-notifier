@@ -1,0 +1,10 @@
+<b>Раздаётся игра {{ game.Name }}</b>
+
+{% if game.Publisher %}
+    Издатель: <b>{{ game.Publisher }}</b>
+{% endif %}
+{% if game.Developer %}
+    Разработчик: <b>{{ game.Developer }}</b>
+{% endif %}
+
+Игра доступна бесплатно до {{ game.FinishDate }}

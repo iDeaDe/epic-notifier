@@ -19,7 +19,7 @@ type InputMedia struct {
 type NewPostResponse struct {
 	Ok     bool `json:"ok"`
 	Result []struct {
-		MessageId int `json:"message_id"`
+		MessageId uint64 `json:"message_id"`
 	} `json:"result"`
 }
 
@@ -94,7 +94,7 @@ func (tg *TelegramSettings) UpdateNext(messageId string, ga *epicgames.Giveaway)
 	}
 }
 
-func (tg *TelegramSettings) PostNext(ga *epicgames.Giveaway) int {
+func (tg *TelegramSettings) PostNext(ga *epicgames.Giveaway) uint64 {
 	var media []InputMedia
 
 	for _, game := range ga.NextGames {
@@ -114,7 +114,7 @@ func (tg *TelegramSettings) PostNext(ga *epicgames.Giveaway) int {
 		media[0].Caption = formatPostText(&ga.NextGames, ga.Next)
 		media[0].ParseMode = "HTML"
 	} else {
-		return -1
+		return 0
 	}
 
 	jsonMedia, _ := json.Marshal(media)

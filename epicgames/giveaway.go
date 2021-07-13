@@ -75,7 +75,10 @@ func GetGiveaway() *Giveaway {
 
 	// Выкладывать будем по московскому времени
 	moscowLoc, _ := time.LoadLocation("Europe/Moscow")
-	rGames := GetGames()
+	rGames, err := GetGames()
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	// Собираем игры из ответа сервера
 	log.Println("Converting raw information to structures")

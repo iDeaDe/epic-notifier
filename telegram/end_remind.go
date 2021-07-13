@@ -9,7 +9,7 @@ import (
 type RemindPostResponse struct {
 	Ok     bool `json:"ok"`
 	Result struct {
-		MessageId int `json:"message_id"`
+		MessageId uint64 `json:"message_id"`
 	} `json:"result"`
 }
 
@@ -35,7 +35,7 @@ func (tg *TelegramSettings) RemoveRemind(messageId string) error {
 	return nil
 }
 
-func (tg *TelegramSettings) Remind(giveaway []epicgames.Game) int {
+func (tg *TelegramSettings) Remind(giveaway []epicgames.Game) uint64 {
 	log.Println("Building keyboard buttons")
 	keyboard := make(map[string][][1]KeyBoardButton)
 

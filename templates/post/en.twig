@@ -1,0 +1,11 @@
+<b>{{ game.Name }} is a free giveaway game</b>
+
+
+{% if game.Publisher %}
+Publisher: <b>{{ game.Publisher }}</b>
+{% endif %}
+{% if game.Developer %}
+Developer: <b>{{ game.Developer }}</b>
+{% endif %}
+
+The game is available for free until {{ game.FinishDate }}

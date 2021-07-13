@@ -3,10 +3,14 @@ package epicgames
 import (
 	"encoding/json"
 	"fmt"
-	"log"
+	"github.com/ideade/epic-notifier/utils"
 	"net/http"
 	"time"
 )
+
+const testConnectionUrl = "https://store-site-backend-static.ak.epicgames.com/"
+
+var logger = utils.NewLogger("[EpicGames]")
 
 var Months = []string{
 	"января",
@@ -45,22 +49,26 @@ func GetMonth(month time.Month) string {
 	return Months[month-1]
 }
 
-func GetGames() []RawGame {
-	log.Println("Fetching new games from Epic Games API")
+func GetGames() ([]RawGame, error) {
+	logger.Println("Fetching new games from Epic Games API")
 	resp, err := http.Get(EpicLink)
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
 
-	log.Println("Decoding JSON")
+	logger.Println("Decoding JSON")
 	responseData := new(Data)
 	err = json.NewDecoder(resp.Body).Decode(responseData)
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
 	_ = resp.Body.Close()
 
 	rGames := responseData.Data.Catalog.SearchStore.Elements
 
-	return rGames
+	return rGames, nil
+}
+
+func CheckConnection() error {
+	return utils.CheckConnection(testConnectionUrl)
 }

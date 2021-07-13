@@ -2,6 +2,7 @@ package telegram
 
 import (
 	"errors"
+	"github.com/ideade/epic-notifier/utils"
 	"io"
 	"net/http"
 	"net/url"
@@ -72,4 +73,8 @@ func (tg *TelegramSettings) Send(req *Request) (*http.Response, error) {
 	}
 
 	return resp, nil
+}
+
+func CheckConnection() error {
+	return utils.CheckConnection(ApiUrl + "bot1")
 }

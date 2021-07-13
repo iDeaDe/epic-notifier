@@ -1,0 +1,7 @@
+Анонс следующей раздачи:
+
+{% for game in ga %}
+{{ loop.index }}. <a href="{{ game.Url }}">{{ game.Title }}</a>
+{% endfor %}
+
+Дата начала раздачи: {{ ga.StartDate }}
