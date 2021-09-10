@@ -2,6 +2,7 @@ package epicgames
 
 import (
 	"log"
+	"math"
 	"time"
 )
 
@@ -27,11 +28,11 @@ type RawGame struct {
 	Categories  []map[string]string `json:"categories"`
 	Price       struct {
 		Total struct {
-			Discount int `json:"discountPrice"`
-			Original int `json:"originalPrice"`
+			Discount float64 `json:"discountPrice"`
+			Original float64 `json:"originalPrice"`
 
 			Currency struct {
-				Decimals int `json:"decimals"`
+				Decimals float64 `json:"decimals"`
 			} `json:"currencyInfo"`
 		} `json:"totalPrice"`
 	} `json:"price"`
@@ -80,9 +81,14 @@ func GetGiveaway() *Giveaway {
 	// Собираем игры из ответа сервера
 	log.Println("Converting raw information to structures")
 	for _, rGame := range rGames {
-		decimals := rGame.Price.Total.Currency.Decimals * 10
-		discountPrice := rGame.Price.Total.Discount / decimals
-		originalPrice := rGame.Price.Total.Original / decimals
+
+		decimals := math.Pow(10, rGame.Price.Total.Currency.Decimals)
+		discountPrice := 0.0
+		originalPrice := 0.0
+		if decimals > 0 {
+			discountPrice = rGame.Price.Total.Discount / decimals
+			originalPrice = rGame.Price.Total.Original / decimals
+		}
 
 		var localGameStruct = Game{}
 		var dates PromotionalOffer
@@ -95,11 +101,6 @@ func GetGiveaway() *Giveaway {
 
 		// Находим даты начала и окончания раздачи
 		if len(rGame.Promotions.Current) > 0 {
-			/*
-				Эпик продолжает вставлять палки в колёса
-				Пришлось добавить ещё и такую проверку
-				Что же будет дальше?
-			*/
 			if rGame.Promotions.Current == nil {
 				continue
 			}

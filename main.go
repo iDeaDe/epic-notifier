@@ -121,7 +121,7 @@ func main() {
 
 		log.Printf("Next giveaway time: %s\n", nextGiveaway.String())
 
-		if recreateNext {
+		if recreateNext || config.Content.NextPostId == -1 {
 			log.Println("Creating post about next giveaway")
 			config.Content.NextPostId = tg.PostNext(ga)
 
