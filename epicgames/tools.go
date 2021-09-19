@@ -51,6 +51,7 @@ func GetGames() []RawGame {
 	if err != nil {
 		log.Panicln(err)
 	}
+	defer resp.Body.Close()
 
 	log.Println("Decoding JSON")
 	responseData := new(Data)

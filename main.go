@@ -48,7 +48,7 @@ func main() {
 		log.Panicln("TELEGRAM_TOKEN not found")
 	}
 
-	tg := new(telegram.TelegramSettings)
+	tg := new(telegram.Settings)
 	tg.Token = telegramToken
 	tg.ChannelName = config.Content.Channel
 	if testChannel != "" {
@@ -104,7 +104,7 @@ func main() {
 
 		if nextGiveaway.Before(time.Now()) {
 			nextGiveaway = time.Now().Add(time.Hour * 24 * 3)
-			postCurrent = false
+			postCurrent = true
 		}
 
 		if postCurrent {

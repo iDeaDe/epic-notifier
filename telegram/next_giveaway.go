@@ -43,7 +43,7 @@ func formatPostText(games *[]epicgames.Game, nextGiveawayTime time.Time) string 
 	return messageText
 }
 
-func (tg *TelegramSettings) RemoveNextPost(messageId string) error {
+func (tg *Settings) RemoveNextPost(messageId string) error {
 	log.Printf("Removing old next giveaway post(ID:%s)\n", messageId)
 	queryParams := map[string]string{
 		"chat_id":    tg.ChannelName,
@@ -65,7 +65,7 @@ func (tg *TelegramSettings) RemoveNextPost(messageId string) error {
 	return nil
 }
 
-func (tg *TelegramSettings) UpdateNext(messageId string, ga *epicgames.Giveaway) {
+func (tg *Settings) UpdateNext(messageId string, ga *epicgames.Giveaway) {
 	log.Printf("Updating next giveaway post(ID:%s)\n", messageId)
 	queryParams := map[string]string{
 		"chat_id":    tg.ChannelName,
@@ -82,10 +82,10 @@ func (tg *TelegramSettings) UpdateNext(messageId string, ga *epicgames.Giveaway)
 
 	log.Println("Sending request to the Telegram API")
 	resp, err := tg.Send(&req)
-
 	if err != nil {
 		log.Println(err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode == 400 {
 		log.Println("Message text didn't changed")
@@ -94,7 +94,7 @@ func (tg *TelegramSettings) UpdateNext(messageId string, ga *epicgames.Giveaway)
 	}
 }
 
-func (tg *TelegramSettings) PostNext(ga *epicgames.Giveaway) int {
+func (tg *Settings) PostNext(ga *epicgames.Giveaway) int {
 	var media []InputMedia
 
 	for _, game := range ga.NextGames {
@@ -133,10 +133,10 @@ func (tg *TelegramSettings) PostNext(ga *epicgames.Giveaway) int {
 
 	log.Println("Sending request to the Telegram API")
 	resp, err := tg.Send(&req)
-
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	message := new(NewPostResponse)
 	_ = json.NewDecoder(resp.Body).Decode(&message)

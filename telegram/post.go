@@ -12,7 +12,7 @@ type KeyBoardButton struct {
 	Url  string `json:"url"`
 }
 
-func (tg *TelegramSettings) Post(game *epicgames.Game, silent bool) {
+func (tg *Settings) Post(game *epicgames.Game, silent bool) {
 	log.Println("Building keyboard buttons")
 
 	// Интерактивные кнопки внизу поста
@@ -45,14 +45,22 @@ func (tg *TelegramSettings) Post(game *epicgames.Game, silent bool) {
 		developer = fmt.Sprintf("Разработчик: <b>%s</b>\n", game.Developer)
 	}
 
+	description := ""
+	if len(game.Description) > 10 {
+		description = fmt.Sprintf("\n%s\n", game.Description)
+	}
+
 	messageText := fmt.Sprintf(
-		"<b>Раздаётся игра %s</b>\n\n%s%s\nИгра доступна бесплатно до %s",
+		"<b>Раздаётся игра %s</b>%s\n\n%s%s\nИгра доступна бесплатно до %s",
 		game.Title,
+		description,
 		publisher,
 		developer,
 		fmt.Sprintf("%d %s",
 			game.Date.End.Day(),
-			epicgames.GetMonth(game.Date.End.Month())))
+			epicgames.GetMonth(game.Date.End.Month()),
+		),
+	)
 
 	queryParams := map[string]string{
 		"chat_id":      tg.ChannelName,
@@ -73,11 +81,11 @@ func (tg *TelegramSettings) Post(game *epicgames.Game, silent bool) {
 
 	log.Println("Sending request to the Telegram API, request URL")
 	resp, err := tg.Send(&req)
-
-	message := new(NewPostResponse)
-	_ = json.NewDecoder(resp.Body).Decode(&message)
-
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer resp.Body.Close()
+
+	message := new(NewPostResponse)
+	_ = json.NewDecoder(resp.Body).Decode(&message)
 }

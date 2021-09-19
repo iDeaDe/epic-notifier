@@ -22,6 +22,7 @@ type PromotionalOffer struct {
 
 type RawGame struct {
 	Title       string              `json:"title"`
+	Description string              `json:"description"`
 	Image       []map[string]string `json:"keyImages"`
 	GameInfo    []map[string]string `json:"customAttributes"`
 	ProductSlug string              `json:"productSlug"`
@@ -44,6 +45,7 @@ type RawGame struct {
 
 type Game struct {
 	Title       string
+	Description string
 	Publisher   string
 	Developer   string
 	IsAvailable bool
@@ -93,14 +95,14 @@ func GetGiveaway() *Giveaway {
 		var localGameStruct = Game{}
 		var dates PromotionalOffer
 
-		localGameStruct.Title = rGame.Title // Название игры
+		localGameStruct.Title = rGame.Title
+		localGameStruct.Description = rGame.Description
 
 		if len(rGame.Promotions.Current) == 0 && len(rGame.Promotions.Upcoming) == 0 {
 			continue
 		}
 
-		// Находим даты начала и окончания раздачи
-		if len(rGame.Promotions.Current) > 0 {
+		if len(rGame.Promotions.Current) > 0 && len(rGame.Promotions.Upcoming) == 0 {
 			if rGame.Promotions.Current == nil {
 				continue
 			}

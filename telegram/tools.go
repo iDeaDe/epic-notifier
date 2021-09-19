@@ -15,7 +15,7 @@ const (
 	MethodPost
 )
 
-type TelegramSettings struct {
+type Settings struct {
 	Token            string
 	ChannelName      string
 	ChannelModerator string
@@ -41,7 +41,7 @@ func EscapeString(text *string) {
 	}
 }
 
-func (tg *TelegramSettings) Send(req *Request) (*http.Response, error) {
+func (tg *Settings) Send(req *Request) (*http.Response, error) {
 	// Собираем ссылку из параметров запроса
 	reqUrl, _ := url.Parse(ApiUrl)
 	reqUrl.Path = "bot" + tg.Token + "/" + req.Name

@@ -13,7 +13,7 @@ type RemindPostResponse struct {
 	} `json:"result"`
 }
 
-func (tg *TelegramSettings) RemoveRemind(messageId string) error {
+func (tg *Settings) RemoveRemind(messageId string) error {
 	log.Printf("Removing remind post(ID:%s)\n", messageId)
 	queryParams := map[string]string{
 		"chat_id":    tg.ChannelName,
@@ -35,7 +35,7 @@ func (tg *TelegramSettings) RemoveRemind(messageId string) error {
 	return nil
 }
 
-func (tg *TelegramSettings) Remind(giveaway []epicgames.Game) int {
+func (tg *Settings) Remind(giveaway []epicgames.Game) int {
 	log.Println("Building keyboard buttons")
 	keyboard := make(map[string][][1]KeyBoardButton)
 
@@ -64,10 +64,10 @@ func (tg *TelegramSettings) Remind(giveaway []epicgames.Game) int {
 
 	log.Println("Sending remind post to the Telegram API")
 	resp, err := tg.Send(&req)
-
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	message := new(RemindPostResponse)
 	_ = json.NewDecoder(resp.Body).Decode(&message)
