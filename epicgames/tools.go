@@ -23,22 +23,34 @@ var Months = []string{
 	"декабря",
 }
 
-var ProductType = []string{
-	"product",
-	"bundles",
-}
-
 func GetLink(slug string, categories []map[string]string) string {
-	gameCategory := ProductType[0]
+	gameCategory := "p"
 
-	// Такой вот костыль из-за того, что в url может быть как product, так и bundles
 	for _, category := range categories {
-		if category["path"] == ProductType[1] {
-			gameCategory = ProductType[1]
+		switch category["path"] {
+		case "bundles":
+			gameCategory = "bundles"
 		}
 	}
 
 	return fmt.Sprintf("%s%s/%s", GameLink, gameCategory, slug)
+}
+
+func GetGameThumbnail(images []map[string]string) string {
+	if len(images) == 0 {
+		return ""
+	}
+
+	for _, image := range images {
+		switch image["type"] {
+		case
+			"DieselStoreFrontTall",
+			"Thumbnail":
+			return image["url"]
+		}
+	}
+
+	return images[0]["url"]
 }
 
 func GetMonth(month time.Month) string {

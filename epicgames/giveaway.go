@@ -25,6 +25,7 @@ type RawGame struct {
 	Description string              `json:"description"`
 	Image       []map[string]string `json:"keyImages"`
 	GameInfo    []map[string]string `json:"customAttributes"`
+	UrlSlug     string              `json:"urlSlug"`
 	ProductSlug string              `json:"productSlug"`
 	Categories  []map[string]string `json:"categories"`
 	Price       struct {
@@ -35,6 +36,10 @@ type RawGame struct {
 			Currency struct {
 				Decimals float64 `json:"decimals"`
 			} `json:"currencyInfo"`
+
+			FormatPrice struct {
+				OriginalPrice string `json:"originalPrice"`
+			} `json:"fmtPrice"`
 		} `json:"totalPrice"`
 	} `json:"price"`
 	Promotions struct {
@@ -50,8 +55,7 @@ type Game struct {
 	Developer   string
 	IsAvailable bool
 	Price       struct {
-		Discount int
-		Original int
+		Format string
 	}
 	Date struct {
 		Start time.Time
@@ -143,34 +147,19 @@ func GetGiveaway() *Giveaway {
 		Этот кусочек добавлен после того, как эпики в ответе стали выдавать игру 2018 года.
 		Посмотрел ответ сервера, там её больше нет, но осадочек остался
 		*/
-		if localGameStruct.Date.Start.Before(time.Now().AddDate(0, -2, 0)) {
+		if localGameStruct.Date.Start.Before(time.Now().AddDate(0, -1, 0)) {
 			continue
 		}
 
-		// Ищем обложку игры
-		for _, image := range rGame.Image {
-			// Для тайных игр
-			if !localGameStruct.IsAvailable &&
-				len(rGame.Image) == 1 &&
-				image["type"] == "VaultClosed" {
-				localGameStruct.Image = image["url"]
-				break
-			}
+		localGameStruct.Image = GetGameThumbnail(rGame.Image)
+		localGameStruct.Price.Format = rGame.Price.Total.FormatPrice.OriginalPrice
 
-			if localGameStruct.Image == "" && (image["type"] == "DieselStoreFrontTall" || image["type"] == "Thumbnail") {
-				localGameStruct.Image = image["url"]
-				break
-			}
-		}
-
-		if localGameStruct.Image == "" && len(rGame.Image) == 1 {
-			localGameStruct.Image = rGame.Image[0]["url"]
-		}
-
-		if rGame.ProductSlug == "[]" {
-			localGameStruct.Url = "https://t.me/epicgiveaways"
+		if rGame.ProductSlug != "" && rGame.ProductSlug != "[]" {
+			localGameStruct.Url = GetLink(rGame.ProductSlug, rGame.Categories)
+		} else if rGame.UrlSlug != "" {
+			localGameStruct.Url = GetLink(rGame.UrlSlug, rGame.Categories)
 		} else {
-			localGameStruct.Url = GetLink(rGame.ProductSlug, rGame.Categories) // Ссылка на страницу игры
+			localGameStruct.Url = "https://t.me/epicgiveaways"
 		}
 
 		// Данный массив может меняться, поэтому ищем нужную информацию таким способом

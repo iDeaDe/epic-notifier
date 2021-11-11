@@ -103,7 +103,7 @@ func main() {
 		/** Всё, что относится к текущей раздаче **/
 
 		if nextGiveaway.Before(time.Now()) {
-			nextGiveaway = time.Now().Add(time.Hour * 24 * 3)
+			nextGiveaway = time.Now().Add(time.Hour * 24 * 5)
 			postCurrent = true
 		}
 
