@@ -72,11 +72,6 @@ func main() {
 		}
 	}
 
-	remindSent := false
-	if config.Content.RemindPostId != -1 {
-		remindSent = true
-	}
-
 	/*
 		Пересоздание поста с анонсом следующей раздачи.
 		Это не работает. В Телеграме нельзя ботом удалять посты старше 48 часов.
@@ -128,18 +123,15 @@ func main() {
 			_ = config.SaveConfig()
 		}
 		log.Printf("Next giveaway post ID: %d\n", config.Content.NextPostId)
-
-		recreateNext = true
-		remindSent = false
 		runtime.GC()
 
 		for {
 			nextPostId := strconv.Itoa(config.Content.NextPostId)
 			remindPostId := strconv.Itoa(config.Content.RemindPostId)
 
-			if !remindSent && time.Until(nextGiveaway).Hours() < 6 {
+			if resendRemind && time.Until(nextGiveaway).Hours() < 6 {
 				config.Content.RemindPostId = tg.Remind(ga.CurrentGames)
-				remindSent = true
+				resendRemind = false
 
 				_ = config.SaveConfig()
 			}
@@ -160,6 +152,9 @@ func main() {
 				} else {
 					config.Content.RemindPostId = -1
 				}
+
+				recreateNext = true
+				resendRemind = true
 
 				_ = config.SaveConfig()
 				break
