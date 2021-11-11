@@ -33,12 +33,15 @@ func formatPostText(games *[]epicgames.Game, nextGiveawayTime time.Time) string 
 		gameTitles = append(gameTitles, gameTitle)
 	}
 
+	moscowLoc, _ := time.LoadLocation("Europe/Moscow")
+
 	messageText := fmt.Sprintf(
 		"Анонс следующей раздачи:\n%s\n\nДата начала раздачи: %s",
 		strings.Join(gameTitles, "\n"),
-		fmt.Sprintf("%d %s",
+		fmt.Sprintf("%d %s, %s",
 			nextGiveawayTime.Day(),
-			epicgames.GetMonth(nextGiveawayTime.Month())))
+			epicgames.GetMonth(nextGiveawayTime.Month()),
+			nextGiveawayTime.In(moscowLoc).Format("15:04 MST")))
 
 	return messageText
 }
