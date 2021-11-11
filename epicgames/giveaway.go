@@ -157,7 +157,7 @@ func GetGiveaway() *Giveaway {
 				break
 			}
 
-			if image["type"] == "DieselStoreFrontTall" {
+			if localGameStruct.Image == "" && (image["type"] == "DieselStoreFrontTall" || image["type"] == "Thumbnail") {
 				localGameStruct.Image = image["url"]
 				break
 			}
