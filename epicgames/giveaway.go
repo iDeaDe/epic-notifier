@@ -80,8 +80,6 @@ func GetGiveaway() *Giveaway {
 	var nextGames []Game
 	ga := new(Giveaway)
 
-	// Выкладывать будем по московскому времени
-	moscowLoc, _ := time.LoadLocation("Europe/Moscow")
 	rGames := GetGames()
 
 	// Собираем игры из ответа сервера
@@ -123,14 +121,8 @@ func GetGiveaway() *Giveaway {
 		}
 
 		// Парсим даты по московскому времени
-		localGameStruct.Date.Start, _ = time.ParseInLocation(
-			time.RFC3339,
-			dates.StartDate,
-			moscowLoc)
-		localGameStruct.Date.End, _ = time.ParseInLocation(
-			time.RFC3339,
-			dates.EndDate,
-			moscowLoc)
+		localGameStruct.Date.Start, _ = time.Parse(time.RFC3339, dates.StartDate)
+		localGameStruct.Date.End, _ = time.Parse(time.RFC3339, dates.EndDate)
 
 		if !(discountPrice == 0 || originalPrice == 0) && localGameStruct.IsAvailable {
 			continue

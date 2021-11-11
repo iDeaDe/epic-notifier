@@ -6,6 +6,7 @@ import (
 	"github.com/ideade/epic-notifier/epicgames"
 	"log"
 	"strings"
+	"time"
 )
 
 type KeyBoardButton struct {
@@ -59,10 +60,13 @@ func (tg *Settings) Post(game *epicgames.Game, silent bool) {
 		price = fmt.Sprintf("Обычная цена: <b>%s</b>", game.Price.Format)
 	}
 
+	moscowLoc, _ := time.LoadLocation("Europe/Moscow")
+
 	endDate := fmt.Sprintf(
-		"\nИгра доступна бесплатно до %d %s",
+		"\nИгра доступна бесплатно до %d %s, %s",
 		game.Date.End.Day(),
-		epicgames.GetMonth(game.Date.End.Month()))
+		epicgames.GetMonth(game.Date.End.Month()),
+		game.Date.End.In(moscowLoc).Format("15:04 MST"))
 
 	messageText := strings.Join(
 		[]string{title, description, price, publisher, developer, endDate},
