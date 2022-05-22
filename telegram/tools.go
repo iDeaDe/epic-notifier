@@ -73,3 +73,22 @@ func (tg *Settings) Send(req *Request) (*http.Response, error) {
 
 	return resp, nil
 }
+
+func JoinNotEmptyStrings(elems []string, sep string) string {
+	switch len(elems) {
+	case 0:
+		return ""
+	case 1:
+		return elems[0]
+	}
+
+	result := elems[0]
+
+	for _, item := range elems[1:] {
+		if item != "" {
+			result += sep + item
+		}
+	}
+
+	return result
+}

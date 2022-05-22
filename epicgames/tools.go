@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -33,6 +34,8 @@ func GetLink(slug string, categories []map[string]string) string {
 		}
 	}
 
+	slug = strings.ReplaceAll(slug, "/home", "")
+
 	return fmt.Sprintf("%s%s/%s", GameLink, gameCategory, slug)
 }
 
@@ -45,7 +48,8 @@ func GetGameThumbnail(images []map[string]string) string {
 		switch image["type"] {
 		case
 			"DieselStoreFrontTall",
-			"Thumbnail":
+			"Thumbnail",
+			"VaultOpened":
 			return image["url"]
 		}
 	}

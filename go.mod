@@ -1,3 +1,3 @@
 module github.com/ideade/epic-notifier
 
-go 1.15
+go 1.18

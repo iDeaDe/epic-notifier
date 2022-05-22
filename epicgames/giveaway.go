@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-const EpicLink = "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=RU&allowCountries=RU"
-const GameLink = "https://www.epicgames.com/store/ru/"
+const EpicLink = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=US&allowCountries=US"
+const GameLink = "https://store.epicgames.com/en-US/"
 
 type Giveaway struct {
 	CurrentGames []Game
@@ -21,9 +21,10 @@ type PromotionalOffer struct {
 }
 
 type RawGame struct {
+	Id          string              `json:"id"`
 	Title       string              `json:"title"`
 	Description string              `json:"description"`
-	Image       []map[string]string `json:"keyImages"`
+	Images      []map[string]string `json:"keyImages"`
 	GameInfo    []map[string]string `json:"customAttributes"`
 	UrlSlug     string              `json:"urlSlug"`
 	ProductSlug string              `json:"productSlug"`
@@ -55,7 +56,8 @@ type Game struct {
 	Developer   string
 	IsAvailable bool
 	Price       struct {
-		Format string
+		Original float64
+		Format   string
 	}
 	Date struct {
 		Start time.Time
@@ -143,7 +145,8 @@ func GetGiveaway() *Giveaway {
 			continue
 		}
 
-		localGameStruct.Image = GetGameThumbnail(rGame.Image)
+		localGameStruct.Image = GetGameThumbnail(rGame.Images)
+		localGameStruct.Price.Original = rGame.Price.Total.Original
 		localGameStruct.Price.Format = rGame.Price.Total.FormatPrice.OriginalPrice
 
 		if rGame.ProductSlug != "" && rGame.ProductSlug != "[]" {

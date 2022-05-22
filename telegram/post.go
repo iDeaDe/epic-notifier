@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/ideade/epic-notifier/epicgames"
 	"log"
-	"strings"
 	"time"
 )
 
@@ -51,16 +50,20 @@ func (tg *Settings) Post(game *epicgames.Game, silent bool) {
 	}
 
 	description := ""
-	if len(game.Description) > 10 {
+	if len(game.Description) > 20 {
 		description = fmt.Sprintf("\n%s\n", game.Description)
 	}
 
 	price := ""
-	if game.Price.Format != "" {
+	if game.Price.Format != "" && game.Price.Original > 0 {
 		price = fmt.Sprintf("Обычная цена: <b>%s</b>", game.Price.Format)
 	}
 
-	moscowLoc, _ := time.LoadLocation("Europe/Moscow")
+	moscowLoc, err := time.LoadLocation("Europe/Moscow")
+
+	if err != nil {
+		log.Panicln(err)
+	}
 
 	endDate := fmt.Sprintf(
 		"\nИгра доступна бесплатно до %d %s, %s",
@@ -68,8 +71,8 @@ func (tg *Settings) Post(game *epicgames.Game, silent bool) {
 		epicgames.GetMonth(game.Date.End.Month()),
 		game.Date.End.In(moscowLoc).Format("15:04 MST"))
 
-	messageText := strings.Join(
-		[]string{title, description, price, publisher, developer, endDate},
+	messageText := JoinNotEmptyStrings(
+		[]string{title, "\n", description, price, publisher, developer, endDate},
 		"\n")
 
 	queryParams := map[string]string{

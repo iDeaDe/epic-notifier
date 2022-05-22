@@ -21,7 +21,7 @@ func main() {
 
 	flag.BoolVar(&postCurrent, "c", true, "Specify to not post current games.")
 	flag.BoolVar(&silent, "s", false, "Specify to post games silently.")
-	flag.BoolVar(&recreateNext, "next", false, "Create new post with games of the next giveaway.")
+	flag.BoolVar(&recreateNext, "n", false, "Create new post with games of the next giveaway.")
 	flag.BoolVar(&resendRemind, "remind", false, "Resend remind post to the channel.")
 	flag.StringVar(&testChannel, "test", "", "Post to the test channel.")
 	flag.Parse()
