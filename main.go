@@ -6,7 +6,6 @@ import (
 	"github.com/ideade/epic-notifier/telegram"
 	"log"
 	"os"
-	"path"
 	"runtime"
 	"strconv"
 	"time"
@@ -25,15 +24,16 @@ func main() {
 	flag.BoolVar(&resendRemind, "remind", false, "Resend remind post to the channel.")
 	flag.StringVar(&testChannel, "test", "", "Post to the test channel.")
 	flag.Parse()
-	/*
-		Смена директории для того, чтобы конфиг создавался рядом с исполняемым файлом
-	*/
-	executable, err := os.Executable()
-	if err != nil {
-		log.Panicln(err)
+
+	workDir := os.Getenv("WORKDIR")
+	if workDir == "" {
+		var err error
+		workDir, err = os.Executable()
+		if err != nil {
+			workDir = "."
+		}
 	}
-	execPath := path.Dir(executable)
-	err = os.Chdir(execPath)
+	err := os.Chdir(workDir)
 	if err != nil {
 		log.Panicln(err)
 	}
