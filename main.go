@@ -97,6 +97,10 @@ func main() {
 
 		/** Всё, что относится к текущей раздаче **/
 
+		if config.Content.RemindPostId == -1 {
+			resendRemind = true
+		}
+
 		if nextGiveaway.Before(time.Now()) {
 			nextGiveaway = time.Now().Add(time.Hour * 24 * 5)
 			postCurrent = true
