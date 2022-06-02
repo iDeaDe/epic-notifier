@@ -29,9 +29,11 @@ func main() {
 	workDir := os.Getenv("WORKDIR")
 	if workDir == "" {
 		var err error
-		workDir, err = os.Executable()
+		executable, err := os.Executable()
 		if err != nil {
-			workDir = filepath.Dir(workDir)
+			workDir = "."
+		} else {
+			workDir = filepath.Dir(executable)
 		}
 	}
 	err := os.Chdir(workDir)
