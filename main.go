@@ -6,6 +6,7 @@ import (
 	"github.com/ideade/epic-notifier/telegram"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"time"
@@ -30,7 +31,7 @@ func main() {
 		var err error
 		workDir, err = os.Executable()
 		if err != nil {
-			workDir = "."
+			workDir = filepath.Dir(workDir)
 		}
 	}
 	err := os.Chdir(workDir)
