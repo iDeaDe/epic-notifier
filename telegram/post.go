@@ -14,25 +14,10 @@ type KeyBoardButton struct {
 }
 
 func (tg *Settings) Post(game *epicgames.Game, silent bool) {
-	log.Println("Building keyboard buttons")
-
-	// Интерактивные кнопки внизу поста
-	var shopButton [1]KeyBoardButton
-	shopButton[0] = KeyBoardButton{
-		Text: "Страница игры",
-		Url:  game.Url,
-	}
-	var moreGamesButton [1]KeyBoardButton
-	moreGamesButton[0] = KeyBoardButton{
-		Text: "Другие бесплатные игры",
-		Url:  "https://www.epicgames.com/store/ru/free-games",
-	}
-	keyboard := make(map[string][2][1]KeyBoardButton)
-	keyboard["inline_keyboard"] = [2][1]KeyBoardButton{shopButton, moreGamesButton}
-	linkButton, _ := json.Marshal(keyboard)
-
+	description := ""
 	publisher := ""
 	developer := ""
+	price := ""
 
 	EscapeString(&game.Title)
 	EscapeString(&game.Publisher)
@@ -49,12 +34,10 @@ func (tg *Settings) Post(game *epicgames.Game, silent bool) {
 		developer = fmt.Sprintf("Разработчик: <b>%s</b>", game.Developer)
 	}
 
-	description := ""
-	if len(game.Description) > 20 {
+	if len(game.Description) > 20 && game.Description != game.Title {
 		description = fmt.Sprintf("\n%s\n", game.Description)
 	}
 
-	price := ""
 	if game.Price.Format != "" && game.Price.Original > 0 {
 		price = fmt.Sprintf("Обычная цена: <b>%s</b>", game.Price.Format)
 	}
@@ -72,15 +55,22 @@ func (tg *Settings) Post(game *epicgames.Game, silent bool) {
 		game.Date.End.In(moscowLoc).Format("15:04 MST"))
 
 	messageText := JoinNotEmptyStrings(
-		[]string{title, "\n", description, price, publisher, developer, endDate},
+		[]string{
+			title,
+			description,
+			price,
+			publisher,
+			developer,
+			fmt.Sprintf("\n<a href=\"%s\">Страница в магазине</a>", game.Url),
+			endDate,
+		},
 		"\n")
 
 	queryParams := map[string]string{
-		"chat_id":      tg.ChannelName,
-		"photo":        game.Image,
-		"parse_mode":   "HTML",
-		"reply_markup": string(linkButton),
-		"caption":      messageText,
+		"chat_id":    tg.ChannelName,
+		"photo":      game.Image,
+		"parse_mode": "HTML",
+		"caption":    messageText,
 	}
 	if silent {
 		queryParams["disable_notification"] = "True"
