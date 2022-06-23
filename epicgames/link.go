@@ -11,6 +11,10 @@ const baseLink = "https://store.epicgames.com/en-US/"
 func GetLink(game *RawGame) string {
 	slug := getSlug(game)
 
+	if slug == "" {
+		return fallbackLink
+	}
+
 	gameCategory := "p"
 
 	for _, category := range game.Categories {
@@ -26,31 +30,38 @@ func GetLink(game *RawGame) string {
 }
 
 func getSlug(game *RawGame) string {
+	/*
+		Есть ощущение, что offerMappings и catalogNs.mappings - одно и то же, но лучше чекать оба
+	*/
 	for _, mapping := range game.OfferMappings {
-		if mapping["pageType"] == "productHome" {
+		if mapping["pageType"] == "productHome" && isNotEmpty(mapping["pageSlug"]) {
 			return mapping["pageSlug"]
 		}
 	}
 
 	for _, mapping := range game.CatalogNs.Mappings {
-		if mapping["pageType"] == "productHome" {
+		if mapping["pageType"] == "productHome" && isNotEmpty(mapping["pageSlug"]) {
 			return mapping["pageSlug"]
 		}
 	}
 
 	for _, item := range game.GameInfo {
-		if item["key"] == "com.epicgames.app.productSlug" {
+		if item["key"] == "com.epicgames.app.productSlug" && isNotEmpty(item["value"]) {
 			return item["value"]
 		}
 	}
 
-	if game.ProductSlug != "" && game.ProductSlug != "[]" {
+	if isNotEmpty(game.ProductSlug) {
 		return game.ProductSlug
 	}
 
-	if game.UrlSlug != "" {
+	if isNotEmpty(game.UrlSlug) {
 		return game.UrlSlug
 	}
 
-	return fallbackLink
+	return ""
+}
+
+func isNotEmpty(slug string) bool {
+	return slug != "" && slug != "[]"
 }
