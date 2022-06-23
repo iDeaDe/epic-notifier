@@ -6,8 +6,7 @@ import (
 	"time"
 )
 
-const EpicLink = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=US&allowCountries=US"
-const GameLink = "https://store.epicgames.com/en-US/"
+const epicLink = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=US&allowCountries=US"
 
 type Giveaway struct {
 	CurrentGames []Game
@@ -29,7 +28,11 @@ type RawGame struct {
 	UrlSlug     string              `json:"urlSlug"`
 	ProductSlug string              `json:"productSlug"`
 	Categories  []map[string]string `json:"categories"`
-	Price       struct {
+	CatalogNs   struct {
+		Mappings []map[string]string `json:"mappings"`
+	} `json:"catalogNs"`
+	OfferMappings []map[string]string `json:"offerMappings"`
+	Price         struct {
 		Total struct {
 			Discount float64 `json:"discountPrice"`
 			Original float64 `json:"originalPrice"`
@@ -82,7 +85,7 @@ func GetGiveaway() *Giveaway {
 	var nextGames []Game
 	ga := new(Giveaway)
 
-	rGames := GetGames()
+	rGames := GetGames(epicLink)
 
 	// Собираем игры из ответа сервера
 	log.Println("Converting raw information to structures")
@@ -149,13 +152,7 @@ func GetGiveaway() *Giveaway {
 		localGameStruct.Price.Original = rGame.Price.Total.Original
 		localGameStruct.Price.Format = rGame.Price.Total.FormatPrice.OriginalPrice
 
-		if rGame.ProductSlug != "" && rGame.ProductSlug != "[]" {
-			localGameStruct.Url = GetLink(rGame.ProductSlug, rGame.Categories)
-		} else if rGame.UrlSlug != "" {
-			localGameStruct.Url = GetLink(rGame.UrlSlug, rGame.Categories)
-		} else {
-			localGameStruct.Url = "https://t.me/epicgiveaways"
-		}
+		localGameStruct.Url = GetLink(&rGame)
 
 		// Данный массив может меняться, поэтому ищем нужную информацию таким способом
 		for _, gameInfo := range rGame.GameInfo {

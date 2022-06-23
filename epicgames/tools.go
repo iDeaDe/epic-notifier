@@ -2,10 +2,8 @@ package epicgames
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
 )
 
@@ -22,21 +20,6 @@ var Months = []string{
 	"октября",
 	"ноября",
 	"декабря",
-}
-
-func GetLink(slug string, categories []map[string]string) string {
-	gameCategory := "p"
-
-	for _, category := range categories {
-		switch category["path"] {
-		case "bundles":
-			gameCategory = "bundles"
-		}
-	}
-
-	slug = strings.ReplaceAll(slug, "/home", "")
-
-	return fmt.Sprintf("%s%s/%s", GameLink, gameCategory, slug)
 }
 
 func GetGameThumbnail(images []map[string]string) string {
@@ -61,9 +44,9 @@ func GetMonth(month time.Month) string {
 	return Months[month-1]
 }
 
-func GetGames() []RawGame {
+func GetGames(link string) []RawGame {
 	log.Println("Fetching new games from Epic Games API")
-	resp, err := http.Get(EpicLink)
+	resp, err := http.Get(link)
 	if err != nil {
 		log.Panicln(err)
 	}
