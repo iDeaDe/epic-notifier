@@ -19,6 +19,10 @@ type PromotionalOffer struct {
 	EndDate   string `json:"endDate"`
 }
 
+type PromotionalOffers []PromotionalOffer
+type Promotion map[string]PromotionalOffers
+type Promotions []Promotion
+
 type RawGame struct {
 	Id          string              `json:"id"`
 	Title       string              `json:"title"`
@@ -47,8 +51,8 @@ type RawGame struct {
 		} `json:"totalPrice"`
 	} `json:"price"`
 	Promotions struct {
-		Current  []map[string][]PromotionalOffer `json:"promotionalOffers"`
-		Upcoming []map[string][]PromotionalOffer `json:"upcomingPromotionalOffers"`
+		Current  Promotions `json:"promotionalOffers"`
+		Upcoming Promotions `json:"upcomingPromotionalOffers"`
 	} `json:"promotions"`
 }
 
@@ -105,24 +109,15 @@ func GetGiveaway() *Giveaway {
 		localGameStruct.Title = rGame.Title
 		localGameStruct.Description = rGame.Description
 
-		if len(rGame.Promotions.Current) == 0 && len(rGame.Promotions.Upcoming) == 0 {
-			continue
-		}
-
-		if len(rGame.Promotions.Current) > 0 && len(rGame.Promotions.Upcoming) == 0 {
-			if rGame.Promotions.Current == nil {
-				continue
-			}
-
+		switch GetType(&rGame) {
+		case Current:
 			localGameStruct.IsAvailable = true
 			dates = rGame.Promotions.Current[0]["promotionalOffers"][0]
-		} else {
-			if rGame.Promotions.Upcoming == nil {
-				continue
-			}
-
+		case Upcoming:
 			localGameStruct.IsAvailable = false
 			dates = rGame.Promotions.Upcoming[0]["promotionalOffers"][0]
+		default:
+			continue
 		}
 
 		// Парсим даты по московскому времени
