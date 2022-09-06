@@ -34,7 +34,7 @@ func (tg *Settings) Post(game *epicgames.Game, silent bool) {
 		developer = fmt.Sprintf("Разработчик: <b>%s</b>", game.Developer)
 	}
 
-	if len(game.Description) > 20 && game.Description != game.Title {
+	if game.Description != "" {
 		description = fmt.Sprintf("\n%s\n", game.Description)
 	}
 
@@ -82,7 +82,7 @@ func (tg *Settings) Post(game *epicgames.Game, silent bool) {
 		Body:   nil,
 	}
 
-	log.Println("Sending request to the Telegram API, request URL")
+	log.Println("Sending request to the Telegram API")
 	resp, err := tg.Send(&req)
 	if err != nil {
 		log.Fatal(err)

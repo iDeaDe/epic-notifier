@@ -84,6 +84,11 @@ type Data struct {
 	} `json:"data"`
 }
 
+type Egs interface {
+	GetGiveaway() *Giveaway
+	GetLink(rGame *RawGame)
+}
+
 func GetGiveaway() *Giveaway {
 	var currentGames []Game
 	var nextGames []Game
@@ -94,7 +99,6 @@ func GetGiveaway() *Giveaway {
 	// Собираем игры из ответа сервера
 	log.Println("Converting raw information to structures")
 	for _, rGame := range rGames {
-
 		decimals := math.Pow(10, rGame.Price.Total.Currency.Decimals)
 		discountPrice := 0.0
 		originalPrice := 0.0
@@ -107,7 +111,10 @@ func GetGiveaway() *Giveaway {
 		var dates PromotionalOffer
 
 		localGameStruct.Title = rGame.Title
-		localGameStruct.Description = rGame.Description
+
+		if len(rGame.Description) > 20 && rGame.Title != rGame.Description {
+			localGameStruct.Description = rGame.Description
+		}
 
 		switch GetType(&rGame) {
 		case Current:
