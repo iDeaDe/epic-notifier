@@ -116,6 +116,14 @@ func GetGiveaway() *Giveaway {
 			localGameStruct.Description = rGame.Description
 		}
 
+		if rGame.Promotions.Current == nil {
+			rGame.Promotions.Current = Promotions{}
+		}
+
+		if rGame.Promotions.Upcoming == nil {
+			rGame.Promotions.Upcoming = Promotions{}
+		}
+
 		switch GetType(&rGame) {
 		case Current:
 			localGameStruct.IsAvailable = true
