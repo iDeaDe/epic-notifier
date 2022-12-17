@@ -32,7 +32,8 @@ func GetGameThumbnail(images []map[string]string) string {
 		case
 			"DieselStoreFrontTall",
 			"Thumbnail",
-			"VaultOpened":
+			"VaultOpened",
+			"DieselStoreFrontWide":
 			return image["url"]
 		}
 	}
