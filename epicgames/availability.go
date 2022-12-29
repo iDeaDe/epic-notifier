@@ -39,7 +39,15 @@ func GetType(game *RawGame) GameType {
 	}
 
 	if len(*current) > 0 && len(*upcoming) > 0 {
-		return Current
+		available, err := isAvailable(upcoming)
+		if err == nil && !available {
+			return Upcoming
+		}
+
+		available, err = isAvailable(current)
+		if err == nil && available {
+			return Current
+		}
 	}
 
 	return Unknown
