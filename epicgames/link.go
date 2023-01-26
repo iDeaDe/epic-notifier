@@ -30,14 +30,6 @@ func GetLink(game *RawGame) string {
 }
 
 func getSlug(game *RawGame) string {
-	if isNotEmpty(game.ProductSlug) {
-		return game.ProductSlug
-	}
-
-	if isNotEmpty(game.UrlSlug) {
-		return game.UrlSlug
-	}
-
 	/*
 		Есть ощущение, что offerMappings и catalogNs.mappings - одно и то же, но лучше чекать оба
 	*/
@@ -57,6 +49,14 @@ func getSlug(game *RawGame) string {
 		if item["key"] == "com.epicgames.app.productSlug" && isNotEmpty(item["value"]) {
 			return item["value"]
 		}
+	}
+
+	if isNotEmpty(game.ProductSlug) {
+		return game.ProductSlug
+	}
+
+	if isNotEmpty(game.UrlSlug) {
+		return game.UrlSlug
 	}
 
 	return ""
