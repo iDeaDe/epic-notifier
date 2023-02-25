@@ -19,8 +19,9 @@ type PromotionalOffer struct {
 	EndDate   string `json:"endDate"`
 }
 
-type PromotionalOffers []PromotionalOffer
-type Promotion map[string]PromotionalOffers
+type Promotion struct {
+	PromotionalOffers []PromotionalOffer `json:"promotionalOffers"`
+}
 type Promotions []Promotion
 
 type RawGame struct {
@@ -61,7 +62,7 @@ type Game struct {
 	Description string
 	Publisher   string
 	Developer   string
-	IsAvailable bool
+	Type        GameType
 	Price       struct {
 		Original float64
 		Format   string
@@ -84,15 +85,11 @@ type Data struct {
 	} `json:"data"`
 }
 
-type Egs interface {
-	GetGiveaway() *Giveaway
-	GetLink(rGame *RawGame)
-}
-
 func GetGiveaway() *Giveaway {
-	var currentGames []Game
-	var nextGames []Game
 	ga := new(Giveaway)
+
+	ga.CurrentGames = []Game{}
+	ga.NextGames = []Game{}
 
 	rGames := GetGames(epicLink)
 
@@ -108,7 +105,6 @@ func GetGiveaway() *Giveaway {
 		}
 
 		var localGameStruct = Game{}
-		var dates PromotionalOffer
 
 		localGameStruct.Title = rGame.Title
 
@@ -124,38 +120,31 @@ func GetGiveaway() *Giveaway {
 			rGame.Promotions.Upcoming = Promotions{}
 		}
 
-		switch GetType(&rGame) {
+		var dates PromotionalOffer
+		localGameStruct.Type = GetType(&rGame)
+
+		switch localGameStruct.Type {
 		case Current:
-			localGameStruct.IsAvailable = true
-			dates = rGame.Promotions.Current[0]["promotionalOffers"][0]
+			dates = rGame.Promotions.Current[0].PromotionalOffers[0]
 		case Upcoming:
-			localGameStruct.IsAvailable = false
-			dates = rGame.Promotions.Upcoming[0]["promotionalOffers"][0]
+			dates = rGame.Promotions.Upcoming[0].PromotionalOffers[0]
 		default:
 			continue
 		}
 
 		// Парсим даты по московскому времени
-		localGameStruct.Date.Start, _ = time.Parse(time.RFC3339, dates.StartDate)
-		localGameStruct.Date.End, _ = time.Parse(time.RFC3339, dates.EndDate)
+		localGameStruct.Date.Start, _ = time.Parse(DateTimeFormat, dates.StartDate)
+		localGameStruct.Date.End, _ = time.Parse(DateTimeFormat, dates.EndDate)
 
-		if !(discountPrice == 0 || originalPrice == 0) && localGameStruct.IsAvailable {
+		if !(discountPrice == 0 || originalPrice == 0) && localGameStruct.Type == Current {
 			continue
 		}
 
-		if !localGameStruct.IsAvailable {
+		if localGameStruct.Type == Upcoming {
 			// Устанавливаем время до следующей раздачи, а если находим раньше текущего - перезаписываем
 			if ga.Next.IsZero() || localGameStruct.Date.Start.Before(ga.Next) {
 				ga.Next = localGameStruct.Date.Start
 			}
-		}
-
-		/**
-		Этот кусочек добавлен после того, как эпики в ответе стали выдавать игру 2018 года.
-		Посмотрел ответ сервера, там её больше нет, но осадочек остался
-		*/
-		if localGameStruct.Date.Start.Before(time.Now().AddDate(0, -1, 0)) {
-			continue
 		}
 
 		localGameStruct.Image = GetGameThumbnail(rGame.Images)
@@ -181,15 +170,13 @@ func GetGiveaway() *Giveaway {
 			}
 		}
 
-		if localGameStruct.IsAvailable {
-			currentGames = append(currentGames, localGameStruct)
-		} else {
-			nextGames = append(nextGames, localGameStruct)
+		switch localGameStruct.Type {
+		case Current:
+			ga.CurrentGames = append(ga.CurrentGames, localGameStruct)
+		case Upcoming:
+			ga.NextGames = append(ga.NextGames, localGameStruct)
 		}
 	}
-
-	ga.CurrentGames = currentGames
-	ga.NextGames = nextGames
 
 	return ga
 }
