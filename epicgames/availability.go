@@ -92,11 +92,11 @@ func getGiveawayTime(promotions *Promotions) (GiveawayTime, error) {
 
 	gaTime := UnknownTime
 
-	promotionalOffers := &((*promotions)[0].PromotionalOffers)
+	promotionalOffers := (*promotions)[0].PromotionalOffers
 
-	sort.Slice(*promotionalOffers, func(i, j int) bool {
-		startTimeI, _, err1 := GetTime((*promotionalOffers)[i])
-		startTimeJ, _, err2 := GetTime((*promotionalOffers)[j])
+	sort.Slice(promotionalOffers, func(i, j int) bool {
+		startTimeI, _, err1 := GetTime(promotionalOffers[i])
+		startTimeJ, _, err2 := GetTime(promotionalOffers[j])
 
 		if err1 != nil || err2 != nil {
 			return err1 != nil && err2 == nil
@@ -136,9 +136,13 @@ func getGiveawayTime(promotions *Promotions) (GiveawayTime, error) {
 }
 
 func filterGames(ga *Giveaway) {
-	for index, game := range ga.NextGames {
-		if game.Date.Start.After(ga.Next) {
-			ga.NextGames = removeGamesByIndex(ga.NextGames, index)
+	var tmpGames []Game
+
+	for _, game := range ga.NextGames {
+		if game.Date.Start.Before(ga.Next) || game.Date.Start.Equal(ga.Next) {
+			tmpGames = append(tmpGames, game)
 		}
 	}
+
+	ga.NextGames = tmpGames
 }
