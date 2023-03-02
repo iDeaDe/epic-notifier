@@ -16,10 +16,8 @@ const (
 )
 
 type Settings struct {
-	Token            string
-	ChannelName      string
-	ChannelModerator string
-	Webhook          string
+	Token       string
+	ChannelName string
 }
 
 type Request struct {

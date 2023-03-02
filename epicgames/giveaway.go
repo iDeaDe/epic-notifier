@@ -178,5 +178,7 @@ func GetGiveaway() *Giveaway {
 		}
 	}
 
+	filterGames(ga)
+
 	return ga
 }

@@ -65,3 +65,7 @@ func GetGames(link string) []RawGame {
 
 	return rGames
 }
+
+func removeGamesByIndex(slice []Game, index int) []Game {
+	return append(slice[:index], slice[index+1:]...)
+}

@@ -1,6 +1,7 @@
 package epicgames
 
 import (
+	"sort"
 	"time"
 )
 
@@ -88,33 +89,56 @@ func selectGameType(giveawayTime GiveawayTime) GameType {
 
 func getGiveawayTime(promotions *Promotions) (GiveawayTime, error) {
 	now := time.Now()
-	startDate, endDate, err := GetTime((*promotions)[0].PromotionalOffers[0])
-
-	if err != nil {
-		return UnknownTime, err
-	}
 
 	gaTime := UnknownTime
 
-	startBeforeNow := startDate.Before(now)
-	startAfterNow := startDate.After(now)
-	endAfterNow := endDate.After(now)
+	promotionalOffers := &((*promotions)[0].PromotionalOffers)
 
-	if startDate.Before(time.Now().AddDate(0, 0, -8)) ||
-		startDate.After(now.AddDate(0, 0, 8)) {
-		return UnknownType, nil
-	}
+	sort.Slice(*promotionalOffers, func(i, j int) bool {
+		startTimeI, _, err1 := GetTime((*promotionalOffers)[i])
+		startTimeJ, _, err2 := GetTime((*promotionalOffers)[j])
 
-	switch {
-	case startBeforeNow && endDate.Before(now):
-		gaTime = Past
-		break
-	case startBeforeNow && endAfterNow:
-		gaTime = Now
-		break
-	case startAfterNow && endAfterNow:
-		gaTime = Future
+		if err1 != nil || err2 != nil {
+			return err1 != nil && err2 == nil
+		}
+
+		return startTimeI.Before(*startTimeJ)
+	})
+
+	for _, promotionalOffer := range (*promotions)[0].PromotionalOffers {
+		startDate, endDate, err := GetTime(promotionalOffer)
+		if err != nil {
+			continue
+		}
+
+		if startDate.Before(time.Now().AddDate(0, 0, -8)) ||
+			startDate.After(now.AddDate(0, 0, 8)) {
+			continue
+		}
+
+		startBeforeNow := startDate.Before(now)
+		startAfterNow := startDate.After(now)
+		endAfterNow := endDate.After(now)
+
+		switch {
+		case startBeforeNow && endDate.Before(now):
+			gaTime = Past
+			break
+		case startBeforeNow && endAfterNow:
+			gaTime = Now
+			break
+		case startAfterNow && endAfterNow:
+			gaTime = Future
+		}
 	}
 
 	return gaTime, nil
+}
+
+func filterGames(ga *Giveaway) {
+	for index, game := range ga.NextGames {
+		if game.Date.Start.After(ga.Next) {
+			ga.NextGames = removeGamesByIndex(ga.NextGames, index)
+		}
+	}
 }
