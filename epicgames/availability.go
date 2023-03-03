@@ -117,7 +117,7 @@ func getGiveawayTime(promotions *Promotions) (GiveawayTime, *PromotionalOffer, e
 				continue
 			}
 
-			if tmpStartDate.Before(*startDate) {
+			if tmpStartDate.Before(*startDate) || tmpStartDate.Equal(*startDate) {
 				startDate = tmpStartDate
 				endDate = tmpEndDate
 				neededPromotionalOffer = promotionalOffer
