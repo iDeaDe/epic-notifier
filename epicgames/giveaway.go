@@ -15,8 +15,12 @@ type Giveaway struct {
 }
 
 type PromotionalOffer struct {
-	StartDate string `json:"startDate"`
-	EndDate   string `json:"endDate"`
+	StartDate       string `json:"startDate"`
+	EndDate         string `json:"endDate"`
+	DiscountSetting struct {
+		DiscountType       string `json:"discountType"`
+		DiscountPercentage int    `json:"discountPercentage"`
+	} `json:"discountSetting"`
 }
 
 type Promotion struct {
@@ -120,15 +124,10 @@ func GetGiveaway() *Giveaway {
 			rGame.Promotions.Upcoming = Promotions{}
 		}
 
-		var dates PromotionalOffer
-		localGameStruct.Type = GetType(&rGame)
+		var dates *PromotionalOffer
+		localGameStruct.Type, dates = GetType(&rGame)
 
-		switch localGameStruct.Type {
-		case Current:
-			dates = rGame.Promotions.Current[0].PromotionalOffers[0]
-		case Upcoming:
-			dates = rGame.Promotions.Upcoming[0].PromotionalOffers[0]
-		default:
+		if localGameStruct.Type == UnknownType {
 			continue
 		}
 
@@ -178,7 +177,7 @@ func GetGiveaway() *Giveaway {
 		}
 	}
 
-	filterGames(ga)
+	filterNextGames(ga)
 
 	return ga
 }
