@@ -46,7 +46,7 @@ func GetType(game *RawGame) (GameType, *PromotionalOffer) {
 
 	if len(*current) > 0 && len(*upcoming) > 0 {
 		giveawayTime, promotionalOffer, err := getGiveawayTime(current)
-		if err == nil {
+		if giveawayTime != UnknownTime && err == nil {
 			return selectGameType(giveawayTime), promotionalOffer
 		}
 
