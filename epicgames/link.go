@@ -8,6 +8,11 @@ import (
 const fallbackLink = "https://t.me/epicgiveaways"
 const baseLink = "https://store.epicgames.com/en-US/"
 
+var slugPageTypes = []string{
+	"productHome",
+	"addon--cms-hybrid",
+}
+
 func GetLink(game *RawGame) string {
 	slug := getSlug(game)
 
@@ -34,7 +39,7 @@ func getSlug(game *RawGame) string {
 		Есть ощущение, что offerMappings и catalogNs.mappings - одно и то же, но лучше чекать оба
 	*/
 	for _, mapping := range game.OfferMappings {
-		if mapping["pageType"] == "productHome" && isNotEmpty(mapping["pageSlug"]) {
+		if inArray(mapping["pageType"], slugPageTypes) && isNotEmpty(mapping["pageSlug"]) {
 			return mapping["pageSlug"]
 		}
 	}
@@ -64,4 +69,14 @@ func getSlug(game *RawGame) string {
 
 func isNotEmpty(slug string) bool {
 	return slug != "" && slug != "[]"
+}
+
+func inArray[E comparable](value E, slice []E) bool {
+	for _, sliceItem := range slice {
+		if value == sliceItem {
+			return true
+		}
+	}
+
+	return false
 }
