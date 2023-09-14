@@ -94,6 +94,7 @@ func main() {
 	logFile, err := os.OpenFile(filepath.Join(logDir, "app.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err == nil {
 		logOut = logFile
+		log.SetOutput(logFile)
 	}
 
 	logger = log.New(logOut, "[Main] ", log.LstdFlags|log.Lshortfile)
