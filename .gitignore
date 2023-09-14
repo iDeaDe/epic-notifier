@@ -2,3 +2,4 @@
 .vscode/*
 config.json
 launch.json
+app.log

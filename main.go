@@ -2,17 +2,68 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/ideade/epic-notifier/epicgames"
 	"github.com/ideade/epic-notifier/telegram"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"time"
 )
 
+var logger *log.Logger
+
+type NotifierConfig struct {
+	Channel             string `json:"channel"`
+	NotificationsUserId int64  `json:"notifications_user_id"`
+	NextPostId          int    `json:"next_post_id"`
+	RemindPostId        int    `json:"remind_post_id"`
+}
+
+func (c *NotifierConfig) GetFilePath() string {
+	return "config.json"
+}
+
+func getDefaultConfig() *NotifierConfig {
+	return &NotifierConfig{
+		Channel:             "",
+		NotificationsUserId: -1,
+		NextPostId:          -1,
+		RemindPostId:        -1,
+	}
+}
+
+func createPidFile() error {
+	var err error
+
+	appTempDir := filepath.Join(os.TempDir(), "epic-notifier")
+
+	if _, err := os.Stat(appTempDir); err != nil && os.IsNotExist(err) {
+		err = os.Mkdir(appTempDir, 0770)
+	}
+	if err != nil {
+		return err
+	}
+
+	pidFile, err := os.Create(filepath.Join(appTempDir, ".running.pid"))
+	if err != nil {
+		return err
+	}
+
+	_, err = pidFile.WriteString(strconv.Itoa(os.Getpid()))
+
+	return err
+}
+
 func main() {
+	err := createPidFile()
+	if err != nil {
+		logger.Fatalln(err)
+	}
+
 	var postCurrent bool
 	var silent bool
 	var recreateNext bool
@@ -36,24 +87,81 @@ func main() {
 			workDir = filepath.Dir(executable)
 		}
 	}
-	err := os.Chdir(workDir)
-	if err != nil {
-		log.Panicln(err)
+
+	logOut := os.Stderr
+
+	logDir := filepath.Dir(workDir)
+	logFile, err := os.OpenFile(filepath.Join(logDir, "app.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err == nil {
+		logOut = logFile
 	}
 
-	var config ConfigFile
-	config.Name = "config.json"
-	config.GetConfig()
+	logger = log.New(logOut, "[Main] ", log.LstdFlags|log.Lshortfile)
+	if err != nil {
+		logger.Fatalln(err)
+	}
+
+	telegram.SetLogger(log.New(logOut, "[Telegram] ", log.LstdFlags|log.Lshortfile))
+	epicgames.SetLogger(log.New(logOut, "[Epicgames] ", log.LstdFlags|log.Lshortfile))
+
+	err = os.Chdir(workDir)
+	if err != nil {
+		logger.Panicln(err)
+	}
+
+	cfg := new(NotifierConfig)
+	err = ReadConfig(cfg)
+	if os.IsNotExist(err) {
+		err = SaveConfig(getDefaultConfig())
+		fmt.Println("Fill config field and rerun the bot")
+		os.Exit(0)
+	}
+	if err != nil {
+		logger.Fatalln(err)
+	}
+
+	go func() {
+		err := logFile.Sync()
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		time.Sleep(time.Second * 3)
+	}()
+
+	autosaver := NewAutosaver(cfg, time.Second*5)
+	autosaver.Start()
+	go func() {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt)
+
+		<-sig
+
+		err := autosaver.Stop()
+		if err != nil {
+			logger.Println(err)
+		}
+
+		for autosaver.Running {
+			time.Sleep(time.Second)
+		}
+
+		err = logFile.Close()
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		os.Exit(0)
+	}()
 
 	telegramToken := os.Getenv("TELEGRAM_TOKEN")
-
 	if telegramToken == "" {
-		log.Panicln("TELEGRAM_TOKEN not found")
+		logger.Panicln("TELEGRAM_TOKEN not found")
 	}
 
-	tg := new(telegram.Settings)
+	tg := new(telegram.Telegram)
 	tg.Token = telegramToken
-	tg.ChannelName = config.Content.Channel
+	tg.ChannelName = cfg.Channel
 	if testChannel != "" {
 		tg.ChannelName = testChannel
 	}
@@ -62,17 +170,18 @@ func main() {
 		Пересоздание поста с напоминанием о последнем дне раздачи.
 	*/
 	if resendRemind {
-		if config.Content.RemindPostId == -1 {
-			log.Println("Remind post does not exist")
+		if cfg.RemindPostId == -1 {
+			logger.Println("Remind post does not exist")
 		} else {
-			err = tg.RemoveRemind(strconv.Itoa(config.Content.RemindPostId))
+			err = tg.RemoveRemind(cfg.RemindPostId)
 			if err != nil {
-				log.Println(err)
+				logger.Println(err)
 			}
 
-			config.Content.RemindPostId = -1
-			_ = config.SaveConfig()
+			cfg.RemindPostId = -1
 		}
+	} else if cfg.RemindPostId == -1 {
+		resendRemind = true
 	}
 
 	/*
@@ -80,99 +189,126 @@ func main() {
 		Это не работает. В Телеграме нельзя ботом удалять посты старше 48 часов.
 	*/
 	if recreateNext {
-		if config.Content.NextPostId == -1 {
-			log.Println("Next giveaway post does not exist")
+		if cfg.NextPostId == -1 {
+			logger.Println("Next giveaway post does not exist")
 		} else {
-			err = tg.RemoveNextPost(strconv.Itoa(config.Content.NextPostId))
+			err = tg.RemoveNextPost(cfg.NextPostId)
 			if err != nil {
-				log.Println(err)
+				logger.Println(err)
 			}
 
-			config.Content.NextPostId = -1
-			_ = config.SaveConfig()
+			cfg.NextPostId = -1
 		}
+	} else if cfg.NextPostId == -1 {
+		recreateNext = true
 	}
 
 	for {
 		ga := new(epicgames.Giveaway)
-		ga = epicgames.GetGiveaway()
+		ga, err = epicgames.GetGiveaway()
+		if err != nil {
+			logger.Panicln(err)
+		}
+
 		nextGiveaway := ga.Next
 
 		/** Всё, что относится к текущей раздаче **/
 
-		if config.Content.RemindPostId == -1 {
-			resendRemind = true
-		}
-
 		if nextGiveaway.Before(time.Now()) {
 			nextGiveaway = time.Now().Add(time.Hour * 24 * 5)
 			postCurrent = true
+			logger.Println(fmt.Sprintf("Next giveaway time was replaced with %s", nextGiveaway.String()))
 		}
 
 		if postCurrent {
 			for _, game := range ga.CurrentGames {
-				log.Printf("Game: %s\n", game.Title)
-				tg.Post(&game, silent)
+				logger.Println(fmt.Sprintf("Game: %s", game.Title))
+				err = tg.Post(&game, silent)
+				if err != nil {
+					logger.Println(err)
+				}
 			}
 		} else {
 			postCurrent = true
-			log.Println("Nothing to post")
+			logger.Println("Nothing to post")
 		}
 
 		/** Всё, что относится к следующей раздаче **/
 
-		log.Printf("Next giveaway time: %s\n", nextGiveaway.String())
+		logger.Println(fmt.Sprintf("Next giveaway time: %s", nextGiveaway.String()))
 
-		if recreateNext || config.Content.NextPostId == -1 {
-			log.Println("Creating post about next giveaway")
-			config.Content.NextPostId = tg.PostNext(ga)
+		if recreateNext {
+			logger.Println("Creating post about next giveaway")
+			cfg.NextPostId, err = tg.PostNext(ga)
+			if err != nil {
+				logger.Println(err)
+			}
 
-			_ = config.SaveConfig()
+			if err = SaveConfig(cfg); err != nil {
+				logger.Fatalln(err)
+			}
 		}
-		log.Printf("Next giveaway post ID: %d\n", config.Content.NextPostId)
+
+		logger.Printf("Next giveaway post ID: %d\n", cfg.NextPostId)
 		runtime.GC()
 
 		for {
-			nextPostId := strconv.Itoa(config.Content.NextPostId)
-			remindPostId := strconv.Itoa(config.Content.RemindPostId)
-
 			timeUntilNextGiveaway := time.Until(nextGiveaway).Hours()
 
 			if resendRemind && timeUntilNextGiveaway < 6 {
-				config.Content.RemindPostId = tg.Remind(ga.CurrentGames)
+				cfg.RemindPostId, err = tg.Remind(ga.CurrentGames)
+				if err != nil {
+					logger.Println(err)
+				}
 				resendRemind = false
 
-				_ = config.SaveConfig()
+				if err = SaveConfig(cfg); err != nil {
+					logger.Fatalln(err)
+				}
+			}
+
+			if time.Until(nextGiveaway.Add(time.Second*5)).Hours() >= 2 {
+				time.Sleep(time.Hour)
+				break
 			}
 
 			if time.Until(nextGiveaway.Add(time.Second*5)).Hours() < 2 {
 				time.Sleep(time.Until(nextGiveaway.Add(time.Second * 5)))
 
-				err = tg.RemoveNextPost(nextPostId)
+				err = tg.RemoveNextPost(cfg.NextPostId)
 				if err != nil {
-					log.Println(err)
+					logger.Println(err)
 				} else {
-					config.Content.NextPostId = -1
+					cfg.NextPostId = -1
 				}
 
-				err = tg.RemoveRemind(remindPostId)
+				err = tg.RemoveRemind(cfg.RemindPostId)
 				if err != nil {
-					log.Println(err)
+					logger.Println(err)
 				} else {
-					config.Content.RemindPostId = -1
+					cfg.RemindPostId = -1
 				}
 
 				recreateNext = true
 				resendRemind = true
 
-				_ = config.SaveConfig()
+				if err = SaveConfig(cfg); err != nil {
+					logger.Fatalln(err)
+				}
 				break
 			} else {
 				time.Sleep(time.Hour)
 			}
 
-			ga = epicgames.GetGiveaway()
-			tg.UpdateNext(nextPostId, ga)
+			ga, err = epicgames.GetGiveaway()
+			if err != nil {
+				logger.Panicln(err)
+			}
+
+			err = tg.UpdateNext(cfg.NextPostId, ga)
+			if err != nil {
+				logger.Println(err)
+			}
 		}
 	}
 }

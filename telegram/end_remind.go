@@ -2,8 +2,9 @@ package telegram
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/ideade/epic-notifier/epicgames"
-	"log"
+	"strconv"
 )
 
 type RemindPostResponse struct {
@@ -13,11 +14,11 @@ type RemindPostResponse struct {
 	} `json:"result"`
 }
 
-func (tg *Settings) RemoveRemind(messageId string) error {
-	log.Printf("Removing remind post(ID:%s)\n", messageId)
+func (tg *Telegram) RemoveRemind(messageId int) error {
+	getLogger().Println(fmt.Sprintf("Removing remind post(ID:%d)\n", messageId))
 	queryParams := map[string]string{
 		"chat_id":    tg.ChannelName,
-		"message_id": messageId,
+		"message_id": strconv.Itoa(messageId),
 	}
 	req := Request{
 		Method: MethodGet,
@@ -26,7 +27,6 @@ func (tg *Settings) RemoveRemind(messageId string) error {
 		Body:   nil,
 	}
 
-	log.Println("Sending request to the Telegram API, request URL")
 	_, err := tg.Send(&req)
 
 	if err != nil {
@@ -35,8 +35,8 @@ func (tg *Settings) RemoveRemind(messageId string) error {
 	return nil
 }
 
-func (tg *Settings) Remind(giveaway []epicgames.Game) int {
-	log.Println("Building keyboard buttons")
+func (tg *Telegram) Remind(giveaway []epicgames.Game) (int, error) {
+	getLogger().Println("Building keyboard buttons")
 	keyboard := make(map[string][][1]KeyBoardButton)
 
 	for _, game := range giveaway {
@@ -47,7 +47,10 @@ func (tg *Settings) Remind(giveaway []epicgames.Game) int {
 
 		keyboard["inline_keyboard"] = append(keyboard["inline_keyboard"], [1]KeyBoardButton{gameButton})
 	}
-	linkButton, _ := json.Marshal(keyboard)
+	linkButton, err := json.Marshal(keyboard)
+	if err != nil {
+		return -1, err
+	}
 
 	queryParams := map[string]string{
 		"chat_id":      tg.ChannelName,
@@ -62,15 +65,18 @@ func (tg *Settings) Remind(giveaway []epicgames.Game) int {
 		Body:   nil,
 	}
 
-	log.Println("Sending remind post to the Telegram API")
+	getLogger().Println("Sending remind post to the Telegram API")
 	resp, err := tg.Send(&req)
 	if err != nil {
-		log.Fatal(err)
+		return -1, err
 	}
 	defer resp.Body.Close()
 
 	message := new(RemindPostResponse)
-	_ = json.NewDecoder(resp.Body).Decode(&message)
+	err = json.NewDecoder(resp.Body).Decode(&message)
+	if err != nil {
+		return -1, err
+	}
 
-	return message.Result.MessageId
+	return message.Result.MessageId, err
 }

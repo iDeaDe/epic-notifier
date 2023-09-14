@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ideade/epic-notifier/epicgames"
-	"log"
 	"time"
 )
 
@@ -13,7 +12,7 @@ type KeyBoardButton struct {
 	Url  string `json:"url"`
 }
 
-func (tg *Settings) Post(game *epicgames.Game, silent bool) {
+func (tg *Telegram) Post(game *epicgames.Game, silent bool) error {
 	description := ""
 	publisher := ""
 	developer := ""
@@ -45,7 +44,7 @@ func (tg *Settings) Post(game *epicgames.Game, silent bool) {
 	moscowLoc, err := time.LoadLocation("Europe/Moscow")
 
 	if err != nil {
-		log.Panicln(err)
+		return err
 	}
 
 	endDate := fmt.Sprintf(
@@ -82,13 +81,18 @@ func (tg *Settings) Post(game *epicgames.Game, silent bool) {
 		Body:   nil,
 	}
 
-	log.Println("Sending request to the Telegram API")
+	getLogger().Println("Sending request to the Telegram API")
 	resp, err := tg.Send(&req)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	message := new(NewPostResponse)
-	_ = json.NewDecoder(resp.Body).Decode(&message)
+	err = json.NewDecoder(resp.Body).Decode(&message)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

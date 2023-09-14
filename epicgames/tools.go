@@ -22,6 +22,20 @@ var Months = []string{
 	"декабря",
 }
 
+var logger *log.Logger
+
+func getLogger() *log.Logger {
+	if logger == nil {
+		logger = log.Default()
+	}
+
+	return logger
+}
+
+func SetLogger(newLogger *log.Logger) {
+	logger = newLogger
+}
+
 func GetGameThumbnail(images []map[string]string) string {
 	if len(images) == 0 {
 		return ""
@@ -45,27 +59,23 @@ func GetMonth(month time.Month) string {
 	return Months[month-1]
 }
 
-func GetGames(link string) []RawGame {
-	log.Println("Fetching new games from Epic Games API")
+func GetGames(link string) ([]RawGame, error) {
+	getLogger().Println("Fetching new games from Epic Games API")
 	resp, err := http.Get(link)
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	log.Println("Decoding JSON")
+	getLogger().Println("Decoding JSON")
 	responseData := new(Data)
 	err = json.NewDecoder(resp.Body).Decode(responseData)
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
 	_ = resp.Body.Close()
 
 	rGames := responseData.Data.Catalog.SearchStore.Elements
 
-	return rGames
-}
-
-func removeGamesByIndex(slice []Game, index int) []Game {
-	return append(slice[:index], slice[index+1:]...)
+	return rGames, nil
 }

@@ -1,7 +1,6 @@
 package epicgames
 
 import (
-	"log"
 	"math"
 	"time"
 )
@@ -89,16 +88,19 @@ type Data struct {
 	} `json:"data"`
 }
 
-func GetGiveaway() *Giveaway {
+func GetGiveaway() (*Giveaway, error) {
 	ga := new(Giveaway)
+
+	rGames, err := GetGames(epicLink)
+	if err != nil {
+		return nil, err
+	}
 
 	ga.CurrentGames = []Game{}
 	ga.NextGames = []Game{}
 
-	rGames := GetGames(epicLink)
-
 	// Собираем игры из ответа сервера
-	log.Println("Converting raw information to structures")
+	getLogger().Println("Converting raw information to structures")
 	for _, rGame := range rGames {
 		decimals := math.Pow(10, rGame.Price.Total.Currency.Decimals)
 		discountPrice := 0.0
@@ -179,5 +181,5 @@ func GetGiveaway() *Giveaway {
 
 	filterNextGames(ga)
 
-	return ga
+	return ga, nil
 }

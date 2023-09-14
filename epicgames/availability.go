@@ -32,14 +32,18 @@ func GetType(game *RawGame) (GameType, *PromotionalOffer) {
 
 	if len(*upcoming) == 0 && len(*current) > 0 {
 		giveawayTime, promotionalOffer, err := getGiveawayTime(current)
-		if err == nil {
+		if err != nil {
+			getLogger().Println(err)
+		} else {
 			return selectGameType(giveawayTime), promotionalOffer
 		}
 	}
 
 	if len(*current) == 0 && len(*upcoming) > 0 {
 		giveawayTime, promotionalOffer, err := getGiveawayTime(upcoming)
-		if err == nil {
+		if err != nil {
+			getLogger().Println(err)
+		} else {
 			return selectGameType(giveawayTime), promotionalOffer
 		}
 	}
@@ -50,9 +54,15 @@ func GetType(game *RawGame) (GameType, *PromotionalOffer) {
 			return selectGameType(giveawayTime), promotionalOffer
 		}
 
+		if err != nil {
+			getLogger().Println(err)
+		}
+
 		giveawayTime, promotionalOffer, err = getGiveawayTime(upcoming)
 		if err == nil {
 			return selectGameType(giveawayTime), promotionalOffer
+		} else {
+			getLogger().Println(err)
 		}
 	}
 
@@ -102,6 +112,7 @@ func getGiveawayTime(promotions *Promotions) (GiveawayTime, *PromotionalOffer, e
 	for index, promotionalOffer := range promotionalOffers {
 		startDate, endDate, err = GetTime(promotionalOffer)
 		if err != nil {
+			getLogger().Println(err)
 			continue
 		}
 
@@ -113,7 +124,12 @@ func getGiveawayTime(promotions *Promotions) (GiveawayTime, *PromotionalOffer, e
 	if len(promotionalOffers) > firstValidIndex {
 		for _, promotionalOffer := range promotionalOffers[firstValidIndex+1:] {
 			tmpStartDate, tmpEndDate, err := GetTime(promotionalOffer)
-			if err != nil || !isRelevantDate(tmpStartDate) || !isGiveawayItem(&promotionalOffer) {
+			if err != nil {
+				getLogger().Println(err)
+				continue
+			}
+
+			if !isRelevantDate(tmpStartDate) || !isGiveawayItem(&promotionalOffer) {
 				continue
 			}
 

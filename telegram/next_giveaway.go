@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ideade/epic-notifier/epicgames"
-	"log"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -18,12 +18,12 @@ type InputMedia struct {
 
 type NewPostResponse struct {
 	Ok     bool `json:"ok"`
-	Result []struct {
+	Result struct {
 		MessageId int `json:"message_id"`
 	} `json:"result"`
 }
 
-func formatPostText(games *[]epicgames.Game, nextGiveawayTime time.Time) string {
+func formatPostText(games *[]epicgames.Game, nextGiveawayTime time.Time) (string, error) {
 	var gameTitles []string
 
 	for index, game := range *games {
@@ -33,7 +33,10 @@ func formatPostText(games *[]epicgames.Game, nextGiveawayTime time.Time) string 
 		gameTitles = append(gameTitles, gameTitle)
 	}
 
-	moscowLoc, _ := time.LoadLocation("Europe/Moscow")
+	moscowLoc, err := time.LoadLocation("Europe/Moscow")
+	if err != nil {
+		return "", err
+	}
 
 	messageText := fmt.Sprintf(
 		"Анонс следующей раздачи:\n%s\n\nДата начала раздачи: %s",
@@ -43,14 +46,14 @@ func formatPostText(games *[]epicgames.Game, nextGiveawayTime time.Time) string 
 			epicgames.GetMonth(nextGiveawayTime.Month()),
 			nextGiveawayTime.In(moscowLoc).Format("15:04 MST")))
 
-	return messageText
+	return messageText, nil
 }
 
-func (tg *Settings) RemoveNextPost(messageId string) error {
-	log.Printf("Removing old next giveaway post(ID:%s)\n", messageId)
+func (tg *Telegram) RemoveNextPost(messageId int) error {
+	getLogger().Println(fmt.Sprintf("Removing old next giveaway post(ID:%d)", messageId))
 	queryParams := map[string]string{
 		"chat_id":    tg.ChannelName,
-		"message_id": messageId,
+		"message_id": strconv.Itoa(messageId),
 	}
 	req := Request{
 		Method: MethodGet,
@@ -59,7 +62,7 @@ func (tg *Settings) RemoveNextPost(messageId string) error {
 		Body:   nil,
 	}
 
-	log.Println("Sending request to the Telegram API, request URL")
+	getLogger().Println("Sending request to the Telegram API, request URL")
 	_, err := tg.Send(&req)
 
 	if err != nil {
@@ -68,12 +71,18 @@ func (tg *Settings) RemoveNextPost(messageId string) error {
 	return nil
 }
 
-func (tg *Settings) UpdateNext(messageId string, ga *epicgames.Giveaway) {
-	log.Printf("Updating next giveaway post(ID:%s)\n", messageId)
+func (tg *Telegram) UpdateNext(messageId int, ga *epicgames.Giveaway) error {
+	getLogger().Println(fmt.Sprintf("Updating next giveaway post(ID:%d)", messageId))
+
+	formattedPostText, err := formatPostText(&ga.NextGames, ga.Next)
+	if err != nil {
+		return err
+	}
+
 	queryParams := map[string]string{
 		"chat_id":    tg.ChannelName,
-		"message_id": messageId,
-		"caption":    formatPostText(&ga.NextGames, ga.Next),
+		"message_id": strconv.Itoa(messageId),
+		"caption":    formattedPostText,
 		"parse_mode": "HTML",
 	}
 	req := Request{
@@ -83,21 +92,23 @@ func (tg *Settings) UpdateNext(messageId string, ga *epicgames.Giveaway) {
 		Body:   nil,
 	}
 
-	log.Println("Sending request to the Telegram API")
+	getLogger().Println("Sending request to the Telegram API")
 	resp, err := tg.Send(&req)
 	if err != nil {
-		log.Println(err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 400 {
-		log.Println("Message text didn't changed")
+		getLogger().Println("Message text didn't changed")
 	} else {
-		log.Println(resp.Status)
+		getLogger().Println(resp.Status)
 	}
+
+	return nil
 }
 
-func (tg *Settings) PostNext(ga *epicgames.Giveaway) int {
+func (tg *Telegram) PostNext(ga *epicgames.Giveaway) (int, error) {
 	var media []InputMedia
 
 	for _, game := range ga.NextGames {
@@ -114,13 +125,20 @@ func (tg *Settings) PostNext(ga *epicgames.Giveaway) int {
 	}
 
 	if len(media) > 0 {
-		media[0].Caption = formatPostText(&ga.NextGames, ga.Next)
+		formattedPostText, err := formatPostText(&ga.NextGames, ga.Next)
+		if err != nil {
+			return -1, err
+		}
+		media[0].Caption = formattedPostText
 		media[0].ParseMode = "HTML"
 	} else {
-		return -1
+		return -1, nil
 	}
 
-	jsonMedia, _ := json.Marshal(media)
+	jsonMedia, err := json.Marshal(media)
+	if err != nil {
+		return -1, err
+	}
 
 	queryParams := map[string]string{
 		"chat_id":              tg.ChannelName,
@@ -134,15 +152,18 @@ func (tg *Settings) PostNext(ga *epicgames.Giveaway) int {
 		Body:   nil,
 	}
 
-	log.Println("Sending request to the Telegram API")
+	getLogger().Println("Sending request to the Telegram API")
 	resp, err := tg.Send(&req)
 	if err != nil {
-		log.Fatal(err)
+		return -1, err
 	}
 	defer resp.Body.Close()
 
 	message := new(NewPostResponse)
-	_ = json.NewDecoder(resp.Body).Decode(&message)
+	err = json.NewDecoder(resp.Body).Decode(&message)
+	if err != nil {
+		return -1, err
+	}
 
-	return message.Result[0].MessageId
+	return message.Result.MessageId, nil
 }

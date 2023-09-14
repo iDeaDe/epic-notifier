@@ -3,6 +3,7 @@ package telegram
 import (
 	"errors"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -15,7 +16,7 @@ const (
 	MethodPost
 )
 
-type Settings struct {
+type Telegram struct {
 	Token       string
 	ChannelName string
 }
@@ -24,7 +25,7 @@ type Request struct {
 	Method uint
 	Name   string
 	Params *map[string]string
-	Body   *io.Reader
+	Body   io.Reader
 }
 
 var Reserved = map[string]string{
@@ -33,15 +34,32 @@ var Reserved = map[string]string{
 	"&": "&amp;",
 }
 
+var logger *log.Logger
+
+func getLogger() *log.Logger {
+	if logger == nil {
+		logger = log.Default()
+	}
+
+	return logger
+}
+
+func SetLogger(newLogger *log.Logger) {
+	logger = newLogger
+}
+
 func EscapeString(text *string) {
 	for search, replace := range Reserved {
 		*text = strings.ReplaceAll(*text, search, replace)
 	}
 }
 
-func (tg *Settings) Send(req *Request) (*http.Response, error) {
+func (tg *Telegram) Send(req *Request) (*http.Response, error) {
 	// Собираем ссылку из параметров запроса
-	reqUrl, _ := url.Parse(ApiUrl)
+	reqUrl, err := url.Parse(ApiUrl)
+	if err != nil {
+		return nil, err
+	}
 	reqUrl.Path = "bot" + tg.Token + "/" + req.Name
 	qVal := reqUrl.Query()
 	if req.Params != nil {
@@ -52,19 +70,16 @@ func (tg *Settings) Send(req *Request) (*http.Response, error) {
 	reqUrl.RawQuery = qVal.Encode()
 
 	var resp *http.Response
-	var err error
-	// Отправляем запрос в зависимости от выбранного метода
 	switch req.Method {
 	case MethodGet:
 		resp, err = http.Get(reqUrl.String())
 		break
 	case MethodPost:
-		resp, err = http.Post(reqUrl.String(), "application/json", *req.Body)
+		resp, err = http.Post(reqUrl.String(), "application/json", req.Body)
 	default:
 		return nil, errors.New("unknown request method")
 	}
 
-	// Проверяем ошибки. В данном случае нас интересуют ошибки самого запроса, либо ошибки, связанные конкретно с Telegram API
 	if err != nil {
 		return nil, err
 	}
@@ -72,6 +87,7 @@ func (tg *Settings) Send(req *Request) (*http.Response, error) {
 	return resp, nil
 }
 
+// JoinNotEmptyStrings Not recommended to use in your projects
 func JoinNotEmptyStrings(elems []string, sep string) string {
 	switch len(elems) {
 	case 0:
