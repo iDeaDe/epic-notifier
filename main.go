@@ -89,9 +89,11 @@ func main() {
 	}
 
 	logOut := os.Stderr
+	logFilePath := filepath.Join(filepath.Dir(workDir), "app.log")
 
-	logDir := filepath.Dir(workDir)
-	logFile, err := os.OpenFile(filepath.Join(logDir, "app.log"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	fmt.Printf("Log file location %s", logFilePath)
+
+	logFile, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err == nil {
 		logOut = logFile
 		log.SetOutput(logFile)
