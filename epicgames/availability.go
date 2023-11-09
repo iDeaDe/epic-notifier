@@ -1,6 +1,7 @@
 package epicgames
 
 import (
+	"errors"
 	"time"
 )
 
@@ -70,6 +71,14 @@ func GetType(game *RawGame) (GameType, *PromotionalOffer) {
 }
 
 func GetTime(offer PromotionalOffer) (*time.Time, *time.Time, error) {
+	if offer.StartDate == "" {
+		return nil, nil, errors.New("empty start date")
+	}
+
+	if offer.EndDate == "" {
+		return nil, nil, errors.New("empty end date")
+	}
+
 	startDate, err := time.Parse(DateTimeFormat, offer.StartDate)
 
 	if err != nil {
@@ -139,6 +148,14 @@ func getGiveawayTime(promotions *Promotions) (GiveawayTime, *PromotionalOffer, e
 				neededPromotionalOffer = promotionalOffer
 			}
 		}
+	}
+
+	if startDate == nil {
+		return UnknownTime, nil, errors.New("empty start date")
+	}
+
+	if endDate == nil {
+		return UnknownTime, nil, errors.New("empty end date")
 	}
 
 	if !isRelevantDate(startDate) || !isGiveawayItem(&neededPromotionalOffer) {
