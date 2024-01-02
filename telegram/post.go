@@ -1,9 +1,12 @@
 package telegram
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/ideade/epic-notifier/epicgames"
+	"html/template"
+	"path/filepath"
 	"time"
 )
 
@@ -12,11 +15,46 @@ type KeyBoardButton struct {
 	Url  string `json:"url"`
 }
 
+func (tg *Telegram) SendGame(game *epicgames.Game) error {
+	tpl, err := template.New("game.gohtml").
+		Funcs(
+			template.FuncMap{
+				"month": epicgames.GetMonth,
+			},
+		).
+		ParseFiles(filepath.Join("template", "game.gohtml"))
+	if err != nil {
+		return err
+	}
+
+	buf := new(bytes.Buffer)
+	if err = tpl.Execute(buf, game); err != nil {
+		return err
+	}
+
+	queryParams := map[string]string{
+		"chat_id":    tg.ChannelName,
+		"photo":      game.Image,
+		"parse_mode": "HTML",
+		"caption":    buf.String(),
+	}
+
+	req := Request{
+		Method: MethodGet,
+		Name:   "sendPhoto",
+		Params: &queryParams,
+		Body:   nil,
+	}
+
+	Send(&req)
+}
+
 func (tg *Telegram) Post(game *epicgames.Game, silent bool) error {
 	description := ""
 	publisher := ""
 	developer := ""
 	price := ""
+	availableRu := ""
 
 	EscapeString(&game.Title)
 	EscapeString(&game.Publisher)
@@ -41,6 +79,10 @@ func (tg *Telegram) Post(game *epicgames.Game, silent bool) error {
 		price = fmt.Sprintf("Обычная цена: <b>%s</b>", game.Price.Format)
 	}
 
+	if !game.AvailableRu {
+		availableRu = "\nНедоступно в РФ"
+	}
+
 	moscowLoc, err := time.LoadLocation("Europe/Moscow")
 
 	if err != nil {
@@ -56,6 +98,7 @@ func (tg *Telegram) Post(game *epicgames.Game, silent bool) error {
 	messageText := JoinNotEmptyStrings(
 		[]string{
 			title,
+			availableRu,
 			description,
 			price,
 			publisher,

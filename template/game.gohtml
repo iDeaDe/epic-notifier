@@ -1,0 +1,21 @@
+{{- /*gotype: github.com/ideade/epic-notifier/epicgames.Game*/ -}}
+<b>Раздаётся игра {{.Title}}</b>
+{{ if .AvailableRu }}
+Недоступно в РФ
+{{ end }}
+{{ if ne .Description "" -}}
+{{ .Description }}
+{{ end }}
+{{- if and (ne .Price.Format "") (gt .Price.Original 0.0) }}
+Обычная цена: {{ .Price.Format }}
+{{- end }}
+{{- if ne .Publisher "" }}
+Издатель: {{ .Publisher }}
+{{- end }}
+{{- if ne .Developer "" }}
+Разработчик: {{ .Developer }}
+{{- end }}
+
+<a href="{{ .Url }}">Страница в магазине</a>
+
+Игра доступна бесплатно до {{ .Date.End.Day }} {{ month .Date.End.Month }} {{ .Date.End.Format "15:04 MST" }}

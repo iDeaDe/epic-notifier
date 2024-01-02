@@ -6,6 +6,7 @@ import (
 )
 
 const epicLink = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=US&allowCountries=US"
+const epicRuLink = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=RU&allowCountries=RU"
 
 type Giveaway struct {
 	CurrentGames []Game
@@ -61,6 +62,7 @@ type RawGame struct {
 }
 
 type Game struct {
+	Id          string
 	Title       string
 	Description string
 	Publisher   string
@@ -74,8 +76,9 @@ type Game struct {
 		Start time.Time
 		End   time.Time
 	}
-	Image string
-	Url   string
+	Image       string
+	Url         string
+	AvailableRu bool
 }
 
 type Data struct {
@@ -88,10 +91,10 @@ type Data struct {
 	} `json:"data"`
 }
 
-func GetGiveaway() (*Giveaway, error) {
+func GetGiveaway(url string) (*Giveaway, error) {
 	ga := new(Giveaway)
 
-	rGames, err := GetGames(epicLink)
+	rGames, err := GetGames(url)
 	if err != nil {
 		return nil, err
 	}
@@ -112,6 +115,7 @@ func GetGiveaway() (*Giveaway, error) {
 
 		var localGameStruct = Game{}
 
+		localGameStruct.Id = rGame.Id
 		localGameStruct.Title = rGame.Title
 
 		if len(rGame.Description) > 20 && rGame.Title != rGame.Description {
@@ -182,4 +186,44 @@ func GetGiveaway() (*Giveaway, error) {
 	filterNextGames(ga)
 
 	return ga, nil
+}
+
+func GetExtendedGiveaway() (*Giveaway, error) {
+	globalGiveaway, err := GetGiveaway(epicLink)
+	if err != nil {
+		return nil, err
+	}
+
+	ruGiveaway, err := GetGiveaway(epicRuLink)
+	if err != nil {
+		return globalGiveaway, err
+	}
+
+	nameToGameMap := map[string]*Game{}
+
+	for _, game := range ruGiveaway.CurrentGames {
+		nameToGameMap[game.Id] = &game
+	}
+
+	for index, game := range globalGiveaway.CurrentGames {
+		ruGame, ok := nameToGameMap[game.Id]
+		globalGiveaway.CurrentGames[index].AvailableRu = ok
+
+		if ok {
+			globalGiveaway.CurrentGames[index].Price = ruGame.Price
+		}
+	}
+
+	nameToGameMap = map[string]*Game{}
+
+	for _, game := range ruGiveaway.NextGames {
+		nameToGameMap[game.Id] = &game
+	}
+
+	for index, game := range globalGiveaway.NextGames {
+		_, ok := nameToGameMap[game.Id]
+		globalGiveaway.NextGames[index].AvailableRu = ok
+	}
+
+	return globalGiveaway, nil
 }
