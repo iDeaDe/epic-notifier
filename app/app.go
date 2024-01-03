@@ -101,6 +101,10 @@ func InitApp() (*App, error) {
 func (a *App) initConfig() error {
 	a.viper = viper.New()
 
+	a.viper.SetDefault("channel", "")
+	a.viper.SetDefault("announce_recheck_interval", 3600)
+	a.viper.SetDefault("remind_post_delay", 3600*6)
+
 	a.viper.AddConfigPath(a.WorkDir)
 	a.viper.SetConfigName("config")
 	a.viper.SetConfigType("toml")
