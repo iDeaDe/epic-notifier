@@ -7,7 +7,7 @@
 {{ .Game.Description }}
 {{ end }}
 {{- if and (ne .Game.Price.Format "") (gt .Game.Price.Original 0.0) }}
-Обычная цена: {{ .Game.Price.Format }}
+Обычная цена: {{ format (convert .Game.Price.Original .Game.Price.Currency "RUB") }} руб. (${{ format (convert .Game.Price.Original .Game.Price.Currency "USD")}})
 {{- end }}
 {{- if ne .Game.Publisher "" }}
 Издатель: {{ .Game.Publisher }}

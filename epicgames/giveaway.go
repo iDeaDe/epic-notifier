@@ -46,7 +46,8 @@ type RawGame struct {
 			Discount float64 `json:"discountPrice"`
 			Original float64 `json:"originalPrice"`
 
-			Currency struct {
+			CurrencyCode string `json:"currencyCode"`
+			Currency     struct {
 				Decimals float64 `json:"decimals"`
 			} `json:"currencyInfo"`
 
@@ -71,6 +72,7 @@ type Game struct {
 	Price       struct {
 		Original float64
 		Format   string
+		Currency string
 	}
 	Date struct {
 		Start time.Time
@@ -153,8 +155,9 @@ func getGiveaway(url string) (*Giveaway, error) {
 		}
 
 		localGameStruct.Image = getGameThumbnail(rGame.Images)
-		localGameStruct.Price.Original = rGame.Price.Total.Original
+		localGameStruct.Price.Original = originalPrice
 		localGameStruct.Price.Format = rGame.Price.Total.FormatPrice.OriginalPrice
+		localGameStruct.Price.Currency = rGame.Price.Total.CurrencyCode
 
 		localGameStruct.Url = getLink(&rGame)
 
