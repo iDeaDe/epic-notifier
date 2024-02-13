@@ -1,8 +1,0 @@
-{{- /*gotype:github.com/ideade/epic-notifier/epicgames.Giveaway*/ -}}
-
-Анонс следующей раздачи:
-{{ range $index, $game := .NextGames }}
-{{ add $index 1 }}. <a href="{{ $game.Url }}">{{ $game.Title }}</a>
-{{ end }}
-
-Дата начала раздачи: {{ .Next.Day }} {{ month .Date.End.Month }} {{ .Date.End.Format "15:04 MST" }}

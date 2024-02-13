@@ -13,7 +13,7 @@ var slugPageTypes = []string{
 	"addon--cms-hybrid",
 }
 
-func GetLink(game *RawGame) string {
+func getLink(game *RawGame) string {
 	slug := getSlug(game)
 
 	if slug == "" {

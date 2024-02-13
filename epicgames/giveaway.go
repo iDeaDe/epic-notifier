@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-const epicLink = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=US&allowCountries=US"
+const epicLink = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=KZ&allowCountries=KZ"
 const epicRuLink = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=RU&allowCountries=RU"
 
 type Giveaway struct {
@@ -91,7 +91,7 @@ type Data struct {
 	} `json:"data"`
 }
 
-func GetGiveaway(url string) (*Giveaway, error) {
+func getGiveaway(url string) (*Giveaway, error) {
 	ga := new(Giveaway)
 
 	rGames, err := GetGames(url)
@@ -103,7 +103,7 @@ func GetGiveaway(url string) (*Giveaway, error) {
 	ga.NextGames = []Game{}
 
 	// Собираем игры из ответа сервера
-	getLogger().Println("Converting raw information to structures")
+	getLogger().Debug().Msg("Converting raw information to structures")
 	for _, rGame := range rGames {
 		decimals := math.Pow(10, rGame.Price.Total.Currency.Decimals)
 		discountPrice := 0.0
@@ -152,11 +152,11 @@ func GetGiveaway(url string) (*Giveaway, error) {
 			}
 		}
 
-		localGameStruct.Image = GetGameThumbnail(rGame.Images)
+		localGameStruct.Image = getGameThumbnail(rGame.Images)
 		localGameStruct.Price.Original = rGame.Price.Total.Original
 		localGameStruct.Price.Format = rGame.Price.Total.FormatPrice.OriginalPrice
 
-		localGameStruct.Url = GetLink(&rGame)
+		localGameStruct.Url = getLink(&rGame)
 
 		// Данный массив может меняться, поэтому ищем нужную информацию таким способом
 		for _, gameInfo := range rGame.GameInfo {
@@ -167,11 +167,9 @@ func GetGiveaway(url string) (*Giveaway, error) {
 			// Разработчик
 			case "developerName":
 				localGameStruct.Developer = fieldVal
-				break
 			// Издатель
 			case "publisherName":
 				localGameStruct.Publisher = fieldVal
-				break
 			}
 		}
 
@@ -188,13 +186,13 @@ func GetGiveaway(url string) (*Giveaway, error) {
 	return ga, nil
 }
 
-func GetExtendedGiveaway() (*Giveaway, error) {
-	globalGiveaway, err := GetGiveaway(epicLink)
+func GetGiveaway() (*Giveaway, error) {
+	globalGiveaway, err := getGiveaway(epicLink)
 	if err != nil {
 		return nil, err
 	}
 
-	ruGiveaway, err := GetGiveaway(epicRuLink)
+	ruGiveaway, err := getGiveaway(epicRuLink)
 	if err != nil {
 		return globalGiveaway, err
 	}

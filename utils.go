@@ -5,7 +5,23 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 )
+
+var Months = []string{
+	"января",
+	"февраля",
+	"марта",
+	"апреля",
+	"мая",
+	"июня",
+	"июля",
+	"августа",
+	"сентября",
+	"октября",
+	"ноября",
+	"декабря",
+}
 
 func getWorkdir() string {
 	resultWorkdir := os.Getenv("WORKDIR")
@@ -30,4 +46,12 @@ func downloadFileByLink(link string) (io.ReadCloser, error) {
 	}
 
 	return resp.Body, nil
+}
+
+func GetMonth(month time.Month) string {
+	return Months[month-1]
+}
+
+func Add(number1 int, number2 int) int {
+	return number1 + number2
 }

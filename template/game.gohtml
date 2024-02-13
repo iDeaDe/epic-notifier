@@ -1,21 +1,21 @@
-{{- /*gotype: github.com/ideade/epic-notifier/epicgames.Game*/ -}}
-<b>Раздаётся игра {{.Title}}</b>
-{{ if .AvailableRu }}
+{{- /*gotype: github.com/ideade/epic-notifier.PostGameTemplateData*/ -}}
+<b>Раздаётся игра {{.Game.Title}}</b>
+{{ if not .Game.AvailableRu  }}
 Недоступна для РФ аккаунтов
 {{ end }}
-{{ if ne .Description "" -}}
-{{ .Description }}
+{{ if ne .Game.Description "" -}}
+{{ .Game.Description }}
 {{ end }}
-{{- if and (ne .Price.Format "") (gt .Price.Original 0.0) }}
-Обычная цена: {{ .Price.Format }}
+{{- if and (ne .Game.Price.Format "") (gt .Game.Price.Original 0.0) }}
+Обычная цена: {{ .Game.Price.Format }}
 {{- end }}
-{{- if ne .Publisher "" }}
-Издатель: {{ .Publisher }}
+{{- if ne .Game.Publisher "" }}
+Издатель: {{ .Game.Publisher }}
 {{- end }}
-{{- if ne .Developer "" }}
-Разработчик: {{ .Developer }}
+{{- if ne .Game.Developer "" }}
+Разработчик: {{ .Game.Developer }}
 {{- end }}
 
-<a href="{{ .Url }}">Страница в магазине</a>
+<a href="{{ .Game.Url }}">Страница в магазине</a>
 
-Игра доступна бесплатно до {{ .Date.End.Day }} {{ month .Date.End.Month }} {{ .Date.End.Format "15:04 MST" }}
+Игра доступна бесплатно до {{ .AvailabilityTime.Day }} {{ month .AvailabilityTime.Month }} {{ .AvailabilityTime.Format "15:04 MST" }}

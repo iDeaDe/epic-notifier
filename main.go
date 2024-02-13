@@ -1,34 +1,34 @@
 package main
 
 import (
-	"github.com/ideade/epic-notifier/epicgames"
-	"github.com/ideade/epic-notifier/telegram"
-	"github.com/knadh/koanf/v2"
-	"github.com/spf13/viper"
+	"errors"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/ideade/epic-notifier/epicgames"
+	"github.com/ideade/epic-notifier/telegram"
+	"github.com/spf13/viper"
 )
 
 func main() {
 	workdir := getWorkdir()
-	config := NotifierConfig{}
 
-	err := readConfig(filepath.Join(workdir, "config.toml"), config, true)
+	mainConfig, err := mainConfig(filepath.Join(workdir, "config.toml"), true)
 	if err != nil {
 		Logger().Panic().Stack().Err(err).Send()
 	}
 
-	koanf.Provider()
-
-	if config.General.Channel == "" {
+	if mainConfig.GetString(ConfigGeneralChannel) == "" {
 		Logger().Print("Fill config fields")
 		os.Exit(0)
 	}
 
 	telegramToken := os.Getenv("TELEGRAM_TOKEN")
 	if telegramToken == "" {
-		Logger().Panic().Msg("TELEGRAM_TOKEN env variable is required")
+		Logger().Error().Msg("TELEGRAM_TOKEN env variable is required")
+		os.Exit(1)
 	}
 
 	runtimeData := viper.New()
@@ -50,27 +50,92 @@ func main() {
 		}
 	}()
 
-	telegramClient := telegram.NewClient(telegramToken)
+	epicgames.SetLogger(Logger())
 
-	postCurrent := config.General.PostCurrentGamesOnStartup
+	telegramClient := telegram.NewClient(telegramToken, http.DefaultClient)
+	poster := NewPoster(telegramClient, mainConfig.GetString(ConfigGeneralChannel))
+	if err = poster.SetTimezone(mainConfig.GetString(ConfigGeneralTimezone)); err != nil {
+		Logger().Panic().Err(err).Send()
+	}
+
+	if mainConfig.GetString(ConfigGeneralNotificationsChatId) != "" {
+		AddLoggerHook(NewNotifyHook(telegramClient, mainConfig.GetString(ConfigGeneralNotificationsChatId)))
+	}
+
+	postCurrent := mainConfig.GetBool(ConfigGeneralPostCurrentGamesOnStartup)
+	postAnnounce := postCurrent
+	removeRemindPost := false
 
 	for {
-		giveaway, err := epicgames.GetExtendedGiveaway()
+		remindPostId := runtimeData.GetString("remind_post_id")
+		if removeRemindPost && remindPostId != "" {
+			_, err := telegramClient.DeleteMessage(&telegram.DeleteMessageRequest{
+				ChatId:    mainConfig.GetString(ConfigGeneralChannel),
+				MessageId: remindPostId,
+			})
+
+			if err != nil {
+				Logger().Err(err).Send()
+			} else {
+				runtimeData.Set("remind_post_id", nil)
+				saveConfig <- true
+			}
+		}
+
+		giveaway, err := epicgames.GetGiveaway()
 		if err != nil {
-			Logger().Err(err).Send()
-			time.Sleep(time.Duration(config.Timings.GiveawayRecheckOnFail))
-			continue
+			if mainConfig.GetBool(ConfigEgsApiRecheckOnFail) {
+				Logger().Err(err).Send()
+
+				time.Sleep(mainConfig.GetDuration(ConfigEgsApiRecheckOnFailDelay))
+				continue
+			} else {
+				Logger().Panic().Err(err).Send()
+			}
 		}
 
 		if postCurrent {
-			for _, game := range giveaway.CurrentGames {
-				_, err := PostGame(telegramClient, config.General.Channel, &game)
-				if err != nil {
-					Logger().Err(err)
-					continue
-				}
+			_, err := poster.PostCurrentGames(giveaway.CurrentGames)
+			if err != nil {
+				Logger().Panic().Err(err).Send()
+				continue
+			}
+
+			postCurrent = false
+		}
+
+		if postAnnounce {
+			_, err := poster.PostAnnounce(giveaway)
+			if err != nil {
+				Logger().Panic().Err(err).Send()
 			}
 		}
+
+		nextGiveawayDate := giveaway.Next
+
+		if nextGiveawayDate.Before(time.Now()) {
+			// todo: подвешивать бота до получения определённой команды
+			Logger().Panic().Err(errors.New("incorrect next giveaway date")).Send()
+		}
+
+		if mainConfig.GetBool(ConfigRemindPostEnabled) {
+			sleepTime := time.Until(nextGiveawayDate).Seconds() - mainConfig.GetFloat64(ConfigRemindPostDelay)
+			time.Sleep(time.Second * time.Duration(sleepTime))
+
+			newRemindPostId, err := poster.PostRemind()
+			if err != nil {
+				Logger().Panic().Err(err).Send()
+			} else {
+				remindPostId = newRemindPostId
+				runtimeData.Set("remind_post_id", remindPostId)
+				saveConfig <- true
+			}
+		}
+
+		removeRemindPost = true
+		postAnnounce = true
+
+		time.Sleep(time.Until(nextGiveawayDate) + mainConfig.GetDuration(ConfigTimingsGiveawayPostDelay))
 	}
 }
 

@@ -6,18 +6,11 @@ import (
 	"net/url"
 )
 
-type HttpMethod = byte
-
-// HTTP Methods
-const (
-	MethodGet HttpMethod = iota
-	MethodPost
-)
-
 type ApiMethod = string
 
 // API Methods
 const (
+	MethodSendMessage        ApiMethod = "sendMessage"
 	MethodSendPhoto          ApiMethod = "sendPhoto"
 	MethodSendMediaGroup     ApiMethod = "sendMediaGroup"
 	MethodEditMessageCaption ApiMethod = "editMessageCaption"
@@ -33,7 +26,8 @@ type Request struct {
 }
 
 type Client struct {
-	Token string
+	Token      string
+	httpClient *http.Client
 }
 
 var Reserved = map[string]string{
@@ -42,10 +36,10 @@ var Reserved = map[string]string{
 	"&": "&amp;",
 }
 
-var httpClient *http.Client = http.DefaultClient
+var httpClient = http.DefaultClient
 
-func NewClient(token string) *Client {
-	return &Client{token}
+func NewClient(token string, httpClient *http.Client) *Client {
+	return &Client{token, httpClient}
 }
 
 func (client *Client) send(request Request) (*http.Response, error) {
