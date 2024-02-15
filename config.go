@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	ConfigGeneralLogOutput                 = "general.log_output"
 	ConfigGeneralChannel                   = "general.channel"
 	ConfigGeneralSilentPost                = "general.silent_post"
 	ConfigGeneralPostCurrentGamesOnStartup = "general.post_current_games_on_startup"
@@ -35,6 +36,7 @@ func mainConfig(path string, trackChanges bool) (*viper.Viper, error) {
 	err := mainConfig.ReadInConfig()
 	if err != nil {
 		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
+			mainConfig.SetDefault(ConfigGeneralLogOutput, "./app.log")
 			mainConfig.SetDefault(ConfigGeneralChannel, "")
 			mainConfig.SetDefault(ConfigGeneralSilentPost, false)
 			mainConfig.SetDefault(ConfigGeneralPostCurrentGamesOnStartup, false)

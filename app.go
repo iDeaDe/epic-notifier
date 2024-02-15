@@ -29,6 +29,10 @@ func Logger() *zerolog.Logger {
 	return logger
 }
 
+func SetLogger(newLogger *zerolog.Logger) {
+	logger = newLogger
+}
+
 func GlobalHttpClient() *http.Client {
 	if globalHttpClient == nil {
 		globalHttpClient = &http.Client{}
@@ -158,7 +162,7 @@ func formatResponseLog(response *http.Response) (string, error) {
 	return result.String(), nil
 }
 
-func (notifyHook *NotifyHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+func (notifyHook *NotifyHook) Run(_ *zerolog.Event, level zerolog.Level, msg string) {
 	if level > zerolog.WarnLevel {
 		message := msg
 		if message == "" {

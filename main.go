@@ -3,9 +3,11 @@ package main
 import (
 	"errors"
 	"github.com/ideade/epic-notifier/currency"
+	"github.com/rs/zerolog"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/ideade/epic-notifier/epicgames"
@@ -19,6 +21,17 @@ func main() {
 	mainConfig, err := mainConfig(filepath.Join(workdir, "config.toml"), true)
 	if err != nil {
 		Logger().Panic().Stack().Err(err).Send()
+	}
+
+	logOutput := mainConfig.GetString(ConfigGeneralLogOutput)
+	if logOutput != "stdout" {
+		file, err := os.OpenFile(filepath.Clean(logOutput), os.O_WRONLY|os.O_CREATE, 0666)
+		if err != nil {
+			Logger().Panic().Stack().Err(err).Send()
+		}
+
+		fileLogger := zerolog.New(file)
+		SetLogger(&fileLogger)
 	}
 
 	if mainConfig.GetString(ConfigGeneralChannel) == "" {
@@ -101,6 +114,12 @@ func main() {
 
 	for {
 		remindPostId := runtimeData.GetString("remind_post_id")
+
+		Logger().Debug().Msgf("postCurrent=%s", strconv.FormatBool(postCurrent))
+		Logger().Debug().Msgf("postAnnounce=%s", strconv.FormatBool(postAnnounce))
+		Logger().Debug().Msgf("removeRemindPost=%s", strconv.FormatBool(removeRemindPost))
+		Logger().Debug().Msgf("remindPostId=%s", remindPostId)
+
 		if removeRemindPost && remindPostId != "" {
 			_, err := telegramClient.DeleteMessage(&telegram.DeleteMessageRequest{
 				ChatId:    mainConfig.GetString(ConfigGeneralChannel),
@@ -113,6 +132,8 @@ func main() {
 				runtimeData.Set("remind_post_id", nil)
 				saveConfig <- true
 			}
+
+			removeRemindPost = false
 		}
 
 		giveaway, err := epicgames.GetGiveaway()
@@ -133,6 +154,8 @@ func main() {
 				Logger().Panic().Err(err).Send()
 				continue
 			}
+
+			postCurrent = false
 		}
 
 		if postAnnounce {
@@ -140,6 +163,8 @@ func main() {
 			if err != nil {
 				Logger().Panic().Err(err).Send()
 			}
+
+			postAnnounce = false
 		}
 
 		nextGiveawayDate := giveaway.Next
@@ -150,8 +175,10 @@ func main() {
 		}
 
 		if mainConfig.GetBool(ConfigRemindPostEnabled) {
-			sleepTime := time.Until(nextGiveawayDate).Seconds() - mainConfig.GetFloat64(ConfigRemindPostDelay)
-			time.Sleep(time.Second * time.Duration(sleepTime))
+			sleepTime := time.Duration(time.Until(nextGiveawayDate).Seconds() - mainConfig.GetFloat64(ConfigRemindPostDelay))
+			sleepTime = time.Second * sleepTime
+			logSleepTime(sleepTime)
+			time.Sleep(sleepTime)
 
 			newRemindPostId, err := poster.PostRemind()
 			if err != nil {
@@ -162,7 +189,10 @@ func main() {
 				saveConfig <- true
 			}
 		} else {
-			time.Sleep(time.Until(nextGiveawayDate) - time.Second*30)
+			// 30 seconds to update currency rates
+			sleepTime := time.Until(nextGiveawayDate) - time.Second*30
+			logSleepTime(sleepTime)
+			time.Sleep(sleepTime)
 		}
 
 		updateCurrencies <- true
@@ -170,6 +200,8 @@ func main() {
 		postCurrent = true
 		postAnnounce = true
 
-		time.Sleep(time.Until(nextGiveawayDate) + mainConfig.GetDuration(ConfigTimingsGiveawayPostDelay))
+		sleepTime := time.Until(nextGiveawayDate) + mainConfig.GetDuration(ConfigTimingsGiveawayPostDelay)
+		logSleepTime(sleepTime)
+		time.Sleep(sleepTime)
 	}
 }

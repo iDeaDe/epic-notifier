@@ -4,6 +4,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func getWorkdir() string {
@@ -29,4 +30,8 @@ func downloadFileByLink(link string) (io.ReadCloser, error) {
 	}
 
 	return resp.Body, nil
+}
+
+func logSleepTime(duration time.Duration) {
+	Logger().Info().Msg("going to sleep till " + time.Now().Add(duration).Format(time.RFC1123))
 }
