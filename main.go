@@ -133,8 +133,6 @@ func main() {
 				Logger().Panic().Err(err).Send()
 				continue
 			}
-
-			postCurrent = false
 		}
 
 		if postAnnounce {
@@ -169,6 +167,7 @@ func main() {
 
 		updateCurrencies <- true
 		removeRemindPost = true
+		postCurrent = true
 		postAnnounce = true
 
 		time.Sleep(time.Until(nextGiveawayDate) + mainConfig.GetDuration(ConfigTimingsGiveawayPostDelay))
