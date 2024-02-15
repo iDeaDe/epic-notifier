@@ -35,6 +35,7 @@ func main() {
 	runtimeData := viper.New()
 	runtimeData.AddConfigPath(workdir)
 	runtimeData.SetConfigName(".runtime")
+	runtimeData.SetConfigType("json")
 
 	saveConfig := make(chan bool, 1)
 
