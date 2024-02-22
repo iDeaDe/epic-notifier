@@ -58,7 +58,7 @@ func main() {
 				continue
 			}
 
-			err := runtimeData.SafeWriteConfig()
+			err := runtimeData.WriteConfig()
 			if err != nil {
 				Logger().Panic().Err(err).Send()
 			}
