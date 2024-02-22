@@ -1,6 +1,7 @@
 package epicgames
 
 import (
+	"errors"
 	"time"
 )
 
@@ -32,14 +33,18 @@ func GetType(game *RawGame) (GameType, *PromotionalOffer) {
 
 	if len(*upcoming) == 0 && len(*current) > 0 {
 		giveawayTime, promotionalOffer, err := getGiveawayTime(current)
-		if err == nil {
+		if err != nil {
+			getLogger().Err(err).Send()
+		} else {
 			return selectGameType(giveawayTime), promotionalOffer
 		}
 	}
 
 	if len(*current) == 0 && len(*upcoming) > 0 {
 		giveawayTime, promotionalOffer, err := getGiveawayTime(upcoming)
-		if err == nil {
+		if err != nil {
+			getLogger().Err(err).Send()
+		} else {
 			return selectGameType(giveawayTime), promotionalOffer
 		}
 	}
@@ -50,9 +55,15 @@ func GetType(game *RawGame) (GameType, *PromotionalOffer) {
 			return selectGameType(giveawayTime), promotionalOffer
 		}
 
+		if err != nil {
+			getLogger().Err(err).Send()
+		}
+
 		giveawayTime, promotionalOffer, err = getGiveawayTime(upcoming)
 		if err == nil {
 			return selectGameType(giveawayTime), promotionalOffer
+		} else {
+			getLogger().Err(err).Send()
 		}
 	}
 
@@ -60,6 +71,14 @@ func GetType(game *RawGame) (GameType, *PromotionalOffer) {
 }
 
 func GetTime(offer PromotionalOffer) (*time.Time, *time.Time, error) {
+	if offer.StartDate == "" {
+		return nil, nil, errors.New("empty start date")
+	}
+
+	if offer.EndDate == "" {
+		return nil, nil, errors.New("empty end date")
+	}
+
 	startDate, err := time.Parse(DateTimeFormat, offer.StartDate)
 
 	if err != nil {
@@ -102,6 +121,7 @@ func getGiveawayTime(promotions *Promotions) (GiveawayTime, *PromotionalOffer, e
 	for index, promotionalOffer := range promotionalOffers {
 		startDate, endDate, err = GetTime(promotionalOffer)
 		if err != nil {
+			getLogger().Err(err).Send()
 			continue
 		}
 
@@ -113,7 +133,12 @@ func getGiveawayTime(promotions *Promotions) (GiveawayTime, *PromotionalOffer, e
 	if len(promotionalOffers) > firstValidIndex {
 		for _, promotionalOffer := range promotionalOffers[firstValidIndex+1:] {
 			tmpStartDate, tmpEndDate, err := GetTime(promotionalOffer)
-			if err != nil || !isRelevantDate(tmpStartDate) || !isGiveawayItem(&promotionalOffer) {
+			if err != nil {
+				getLogger().Err(err).Send()
+				continue
+			}
+
+			if !isRelevantDate(tmpStartDate) || !isGiveawayItem(&promotionalOffer) {
 				continue
 			}
 
@@ -123,6 +148,14 @@ func getGiveawayTime(promotions *Promotions) (GiveawayTime, *PromotionalOffer, e
 				neededPromotionalOffer = promotionalOffer
 			}
 		}
+	}
+
+	if startDate == nil {
+		return UnknownTime, nil, errors.New("empty start date")
+	}
+
+	if endDate == nil {
+		return UnknownTime, nil, errors.New("empty end date")
 	}
 
 	if !isRelevantDate(startDate) || !isGiveawayItem(&neededPromotionalOffer) {

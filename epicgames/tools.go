@@ -2,27 +2,39 @@ package epicgames
 
 import (
 	"encoding/json"
-	"log"
+	"github.com/rs/zerolog"
 	"net/http"
-	"time"
 )
 
-var Months = []string{
-	"января",
-	"февраля",
-	"марта",
-	"апреля",
-	"мая",
-	"июня",
-	"июля",
-	"августа",
-	"сентября",
-	"октября",
-	"ноября",
-	"декабря",
+var logger *zerolog.Logger
+var client *http.Client
+
+func getLogger() *zerolog.Logger {
+	if logger == nil {
+		newLogger := zerolog.New(zerolog.NewConsoleWriter())
+		logger = &newLogger
+	}
+
+	return logger
 }
 
-func GetGameThumbnail(images []map[string]string) string {
+func getClient() *http.Client {
+	if client == nil {
+		client = http.DefaultClient
+	}
+
+	return client
+}
+
+func SetLogger(newLogger *zerolog.Logger) {
+	logger = newLogger
+}
+
+func SetClient(newClient *http.Client) {
+	client = newClient
+}
+
+func getGameThumbnail(images []map[string]string) string {
 	if len(images) == 0 {
 		return ""
 	}
@@ -41,31 +53,23 @@ func GetGameThumbnail(images []map[string]string) string {
 	return images[0]["url"]
 }
 
-func GetMonth(month time.Month) string {
-	return Months[month-1]
-}
-
-func GetGames(link string) []RawGame {
-	log.Println("Fetching new games from Epic Games API")
-	resp, err := http.Get(link)
+func GetGames(link string) ([]RawGame, error) {
+	getLogger().Debug().Msg("Fetching new games from Epic Games API")
+	resp, err := getClient().Get(link)
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	log.Println("Decoding JSON")
+	getLogger().Debug().Msg("Decoding JSON")
 	responseData := new(Data)
 	err = json.NewDecoder(resp.Body).Decode(responseData)
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
 	_ = resp.Body.Close()
 
 	rGames := responseData.Data.Catalog.SearchStore.Elements
 
-	return rGames
-}
-
-func removeGamesByIndex(slice []Game, index int) []Game {
-	return append(slice[:index], slice[index+1:]...)
+	return rGames, nil
 }

@@ -1,4 +1,6 @@
 .idea/*
 .vscode/*
-config.json
+.runtime
+config.toml
 launch.json
+app.log

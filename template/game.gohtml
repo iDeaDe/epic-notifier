@@ -1,0 +1,21 @@
+{{- /*gotype: github.com/ideade/epic-notifier.PostGameTemplateData*/ -}}
+<b>Раздаётся игра {{.Game.Title}}</b>
+{{ if not .Game.AvailableRu  }}
+Недоступна для РФ аккаунтов
+{{ end }}
+{{ if ne .Game.Description "" -}}
+{{ .Game.Description }}
+{{ end }}
+{{- if and (ne .Game.Price.Format "") (gt .Game.Price.Original 0.0) }}
+Обычная цена: {{ format (convert .Game.Price.Original .Game.Price.Currency "RUB") }} руб. (${{ format (convert .Game.Price.Original .Game.Price.Currency "USD")}})
+{{- end }}
+{{- if ne .Game.Publisher "" }}
+Издатель: {{ .Game.Publisher }}
+{{- end }}
+{{- if ne .Game.Developer "" }}
+Разработчик: {{ .Game.Developer }}
+{{- end }}
+
+<a href="{{ .Game.Url }}">Страница в магазине</a>
+
+Игра доступна бесплатно до {{ .AvailabilityTime.Day }} {{ month .AvailabilityTime.Month }} {{ .AvailabilityTime.Format "15:04 MST" }}

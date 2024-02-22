@@ -1,96 +1,72 @@
 package main
 
 import (
-	"encoding/json"
-	"log"
-	"os"
+	"errors"
+	"path/filepath"
+	"strings"
+
+	"github.com/spf13/viper"
 )
 
-type ConfigFile struct {
-	Name    string
-	Content *Config
-}
+const (
+	ConfigGeneralLogOutput                 = "general.log_output"
+	ConfigGeneralChannel                   = "general.channel"
+	ConfigGeneralSilentPost                = "general.silent_post"
+	ConfigGeneralPostCurrentGamesOnStartup = "general.post_current_games_on_startup"
+	ConfigGeneralTimezone                  = "general.timezone"
+	ConfigGeneralNotificationsChatId       = "general.notifications_chat_id"
 
-type Config struct {
-	Channel      string `json:"channel"`
-	NextPostId   int    `json:"next_post_id"`
-	RemindPostId int    `json:"remind_post_id"`
-}
+	ConfigTimingsAnnounceRecheckInterval = "timings.announce_recheck_interval"
+	ConfigTimingsGiveawayPostDelay       = "timings.giveaway_post_delay"
 
-var defaultConfig = Config{
-	Channel:      "",
-	NextPostId:   -1,
-	RemindPostId: -1,
-}
+	ConfigEgsApiRecheckOnFail      = "egs_api.recheck_on_fail"
+	ConfigEgsApiRecheckOnFailDelay = "egs_api.recheck_on_fail_delay"
 
-func (file *ConfigFile) SaveConfig() error {
-	cfgFile, err := os.OpenFile(file.Name, os.O_WRONLY|os.O_TRUNC, os.ModePerm)
+	ConfigRemindPostEnabled = "remind_post.enabled"
+	ConfigRemindPostDelay   = "remind_post.delay"
+)
+
+func mainConfig(path string, trackChanges bool) (*viper.Viper, error) {
+	mainConfig := viper.New()
+	mainConfig.AddConfigPath(filepath.Dir(path))
+	nameParts := strings.Split(filepath.Base(path), ".")
+	mainConfig.SetConfigName(strings.Join(nameParts[:len(nameParts)-1], "."))
+	mainConfig.SetConfigType(nameParts[len(nameParts)-1])
+
+	err := mainConfig.ReadInConfig()
 	if err != nil {
-		return err
-	}
-	defer cfgFile.Close()
+		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
+			mainConfig.SetDefault(ConfigGeneralLogOutput, "./app.log")
+			mainConfig.SetDefault(ConfigGeneralChannel, "")
+			mainConfig.SetDefault(ConfigGeneralSilentPost, false)
+			mainConfig.SetDefault(ConfigGeneralPostCurrentGamesOnStartup, false)
+			mainConfig.SetDefault(ConfigGeneralTimezone, "Europe/Moscow")
+			mainConfig.SetDefault(ConfigGeneralNotificationsChatId, "")
 
-	content, err := json.Marshal(file.Content)
-	if err != nil {
-		return err
-	}
-	_, err = cfgFile.Write(content)
-	if err != nil {
-		return err
-	}
+			mainConfig.SetDefault(ConfigTimingsAnnounceRecheckInterval, 3600)
+			mainConfig.SetDefault(ConfigTimingsGiveawayPostDelay, 10)
 
-	return nil
-}
+			mainConfig.SetDefault(ConfigEgsApiRecheckOnFail, true)
+			mainConfig.SetDefault(ConfigEgsApiRecheckOnFailDelay, 60)
 
-func (file *ConfigFile) GetConfig() {
-	cfgFile, err := os.OpenFile(file.Name, os.O_RDONLY, os.ModePerm)
+			mainConfig.SetDefault(ConfigRemindPostEnabled, true)
+			mainConfig.SetDefault(ConfigRemindPostDelay, 3600*6)
 
-	if os.IsNotExist(err) {
-		createDefaultConfig(file.Name)
-		defaultCopy := defaultConfig
-		file.Content = &defaultCopy
-		return
-	} else if err != nil {
-		log.Panicf("Can't open the config file.\nError: %v", err)
-	}
-	defer cfgFile.Close()
+			if err := mainConfig.SafeWriteConfig(); err != nil {
+				return nil, err
+			}
 
-	var fileSize int64
-	fileStat, err := cfgFile.Stat()
-	if err != nil {
-		fileSize = 4096
-	} else {
-		fileSize = fileStat.Size()
+			if err = mainConfig.ReadInConfig(); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
 	}
 
-	fileContent := make([]byte, fileSize)
-	_, err = cfgFile.Read(fileContent)
-
-	config := new(Config)
-	err = json.Unmarshal(fileContent, config)
-	if err != nil {
-		log.Panicf("Error in unmarshal config.\n%v", err)
-	}
-	file.Content = config
-}
-
-func createDefaultConfig(filename string) {
-	file, err := os.Create(filename)
-	if err != nil {
-		log.Panicf("Can't create the config file.\nError: %v", err)
-	}
-	defer file.Close()
-
-	content, err := json.Marshal(defaultConfig)
-	if err != nil {
-		log.Panicf("Can't marshal default config.\nError: %v", err)
+	if trackChanges {
+		mainConfig.WatchConfig()
 	}
 
-	_, err = file.Write(content)
-	if err != nil {
-		log.Panicln("Seems like config file is unwritable")
-	}
-
-	log.Printf("Fill all fields in created config file(%s)\n", filename)
-	os.Exit(0)
+	return mainConfig, err
 }

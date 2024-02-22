@@ -1,12 +1,12 @@
 package epicgames
 
 import (
-	"log"
 	"math"
 	"time"
 )
 
-const epicLink = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=US&allowCountries=US"
+const epicLink = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=KZ&allowCountries=KZ"
+const epicRuLink = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions?locale=ru-RU&country=RU&allowCountries=RU"
 
 type Giveaway struct {
 	CurrentGames []Game
@@ -46,7 +46,8 @@ type RawGame struct {
 			Discount float64 `json:"discountPrice"`
 			Original float64 `json:"originalPrice"`
 
-			Currency struct {
+			CurrencyCode string `json:"currencyCode"`
+			Currency     struct {
 				Decimals float64 `json:"decimals"`
 			} `json:"currencyInfo"`
 
@@ -62,6 +63,7 @@ type RawGame struct {
 }
 
 type Game struct {
+	Id          string
 	Title       string
 	Description string
 	Publisher   string
@@ -70,13 +72,15 @@ type Game struct {
 	Price       struct {
 		Original float64
 		Format   string
+		Currency string
 	}
 	Date struct {
 		Start time.Time
 		End   time.Time
 	}
-	Image string
-	Url   string
+	Image       string
+	Url         string
+	AvailableRu bool
 }
 
 type Data struct {
@@ -89,16 +93,19 @@ type Data struct {
 	} `json:"data"`
 }
 
-func GetGiveaway() *Giveaway {
+func getGiveaway(url string) (*Giveaway, error) {
 	ga := new(Giveaway)
+
+	rGames, err := GetGames(url)
+	if err != nil {
+		return nil, err
+	}
 
 	ga.CurrentGames = []Game{}
 	ga.NextGames = []Game{}
 
-	rGames := GetGames(epicLink)
-
 	// Собираем игры из ответа сервера
-	log.Println("Converting raw information to structures")
+	getLogger().Debug().Msg("Converting raw information to structures")
 	for _, rGame := range rGames {
 		decimals := math.Pow(10, rGame.Price.Total.Currency.Decimals)
 		discountPrice := 0.0
@@ -110,6 +117,7 @@ func GetGiveaway() *Giveaway {
 
 		var localGameStruct = Game{}
 
+		localGameStruct.Id = rGame.Id
 		localGameStruct.Title = rGame.Title
 
 		if len(rGame.Description) > 20 && rGame.Title != rGame.Description {
@@ -146,11 +154,12 @@ func GetGiveaway() *Giveaway {
 			}
 		}
 
-		localGameStruct.Image = GetGameThumbnail(rGame.Images)
-		localGameStruct.Price.Original = rGame.Price.Total.Original
+		localGameStruct.Image = getGameThumbnail(rGame.Images)
+		localGameStruct.Price.Original = originalPrice
 		localGameStruct.Price.Format = rGame.Price.Total.FormatPrice.OriginalPrice
+		localGameStruct.Price.Currency = rGame.Price.Total.CurrencyCode
 
-		localGameStruct.Url = GetLink(&rGame)
+		localGameStruct.Url = getLink(&rGame)
 
 		// Данный массив может меняться, поэтому ищем нужную информацию таким способом
 		for _, gameInfo := range rGame.GameInfo {
@@ -161,11 +170,9 @@ func GetGiveaway() *Giveaway {
 			// Разработчик
 			case "developerName":
 				localGameStruct.Developer = fieldVal
-				break
 			// Издатель
 			case "publisherName":
 				localGameStruct.Publisher = fieldVal
-				break
 			}
 		}
 
@@ -179,5 +186,45 @@ func GetGiveaway() *Giveaway {
 
 	filterNextGames(ga)
 
-	return ga
+	return ga, nil
+}
+
+func GetGiveaway() (*Giveaway, error) {
+	globalGiveaway, err := getGiveaway(epicLink)
+	if err != nil {
+		return nil, err
+	}
+
+	ruGiveaway, err := getGiveaway(epicRuLink)
+	if err != nil {
+		return globalGiveaway, err
+	}
+
+	nameToGameMap := map[string]*Game{}
+
+	for _, game := range ruGiveaway.CurrentGames {
+		nameToGameMap[game.Id] = &game
+	}
+
+	for index, game := range globalGiveaway.CurrentGames {
+		ruGame, ok := nameToGameMap[game.Id]
+		globalGiveaway.CurrentGames[index].AvailableRu = ok
+
+		if ok {
+			globalGiveaway.CurrentGames[index].Price = ruGame.Price
+		}
+	}
+
+	nameToGameMap = map[string]*Game{}
+
+	for _, game := range ruGiveaway.NextGames {
+		nameToGameMap[game.Id] = &game
+	}
+
+	for index, game := range globalGiveaway.NextGames {
+		_, ok := nameToGameMap[game.Id]
+		globalGiveaway.NextGames[index].AvailableRu = ok
+	}
+
+	return globalGiveaway, nil
 }
