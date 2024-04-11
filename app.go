@@ -342,11 +342,15 @@ func (poster *Poster) PostAnnounce(giveaway *epicgames.Giveaway) ([]string, erro
 	return postIds, nil
 }
 
-func (poster *Poster) PostRemind() (string, error) {
+type PostRemindTemplateData struct {
+	Giveaway *epicgames.Giveaway
+}
+
+func (poster *Poster) PostRemind(giveaway *epicgames.Giveaway) (string, error) {
 	tpl, err := template.New("remind.gohtml").
 		Funcs(
 			template.FuncMap{
-				"month": GetMonth,
+				"add": Add,
 			},
 		).
 		ParseFiles(filepath.Join(poster.templateDir, "remind.gohtml"))
@@ -355,8 +359,12 @@ func (poster *Poster) PostRemind() (string, error) {
 		return "", err
 	}
 
+	data := &PostRemindTemplateData{
+		Giveaway: giveaway,
+	}
+
 	buffer := bytes.Buffer{}
-	if err = tpl.Execute(&buffer, nil); err != nil {
+	if err = tpl.Execute(&buffer, data); err != nil {
 		return "", err
 	}
 

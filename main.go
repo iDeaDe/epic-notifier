@@ -129,7 +129,8 @@ func main() {
 			if err != nil {
 				Logger().Err(err).Send()
 			} else {
-				runtimeData.Set("remind_post_id", nil)
+				runtimeData.Set("remind_post_id", "")
+				remindPostId = ""
 				saveConfig <- true
 			}
 
@@ -146,6 +147,13 @@ func main() {
 			} else {
 				Logger().Panic().Err(err).Send()
 			}
+		}
+
+		nextGiveawayDate := giveaway.Next
+
+		if nextGiveawayDate.Before(time.Now()) {
+			// todo: подвешивать бота до получения определённой команды
+			Logger().Panic().Err(errors.New("incorrect next giveaway date")).Send()
 		}
 
 		if postCurrent {
@@ -167,20 +175,13 @@ func main() {
 			postAnnounce = false
 		}
 
-		nextGiveawayDate := giveaway.Next
-
-		if nextGiveawayDate.Before(time.Now()) {
-			// todo: подвешивать бота до получения определённой команды
-			Logger().Panic().Err(errors.New("incorrect next giveaway date")).Send()
-		}
-
-		if mainConfig.GetBool(ConfigRemindPostEnabled) {
+		if mainConfig.GetBool(ConfigRemindPostEnabled) && remindPostId == "" {
 			sleepTime := time.Duration(time.Until(nextGiveawayDate).Seconds() - mainConfig.GetFloat64(ConfigRemindPostDelay))
 			sleepTime = time.Second * sleepTime
 			logSleepTime(sleepTime)
 			time.Sleep(sleepTime)
 
-			newRemindPostId, err := poster.PostRemind()
+			newRemindPostId, err := poster.PostRemind(giveaway)
 			if err != nil {
 				Logger().Panic().Err(err).Send()
 			} else {

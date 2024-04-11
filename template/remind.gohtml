@@ -1,3 +1,8 @@
+{{- /*gotype:github.com/ideade/epic-notifier.PostRemindTemplateData*/ -}}
+
 <b>Напоминание!</b>
 
-Сегодня последний день раздачи.
+Сегодня последний день раздачи:
+{{ range $index, $game := .Giveaway.NextGames }}
+{{ add $index 1 }}. <a href="{{ $game.Url }}">{{ $game.Title }}</a>
+{{- end }}
