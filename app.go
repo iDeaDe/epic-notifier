@@ -374,6 +374,7 @@ func (poster *Poster) PostRemind(giveaway *epicgames.Giveaway) (string, error) {
 		ParseMode:           telegram.ParseModeHtml,
 		DisableNotification: poster.silentMode,
 		ProtectContent:      false,
+		LinkPreviewOptions:  &telegram.LinkPreviewOptions{IsDisabled: true},
 	})
 
 	if err != nil {

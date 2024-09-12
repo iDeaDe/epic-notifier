@@ -6,11 +6,16 @@ import (
 )
 
 type SendMessageRequest struct {
-	ChatId              string    `json:"chat_id"`
-	Text                string    `json:"text"`
-	ParseMode           ParseMode `json:"parse_mode,omitempty"`
-	DisableNotification bool      `json:"disable_notification,omitempty"`
-	ProtectContent      bool      `json:"protect_content,omitempty"`
+	ChatId              string              `json:"chat_id"`
+	Text                string              `json:"text"`
+	ParseMode           ParseMode           `json:"parse_mode,omitempty"`
+	DisableNotification bool                `json:"disable_notification,omitempty"`
+	ProtectContent      bool                `json:"protect_content,omitempty"`
+	LinkPreviewOptions  *LinkPreviewOptions `json:"link_preview_options,omitempty"`
+}
+
+type LinkPreviewOptions struct {
+	IsDisabled bool `json:"is_disabled,omitempty"`
 }
 
 func (client *Client) SendMessage(request *SendMessageRequest) (*Message, error) {

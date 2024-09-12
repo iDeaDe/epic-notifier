@@ -26,37 +26,37 @@ const (
 	ConfigRemindPostDelay   = "remind_post.delay"
 )
 
-func mainConfig(path string, trackChanges bool) (*viper.Viper, error) {
-	mainConfig := viper.New()
-	mainConfig.AddConfigPath(filepath.Dir(path))
+func getMainConfig(path string, trackChanges bool) (*viper.Viper, error) {
+	config := viper.New()
+	config.AddConfigPath(filepath.Dir(path))
 	nameParts := strings.Split(filepath.Base(path), ".")
-	mainConfig.SetConfigName(strings.Join(nameParts[:len(nameParts)-1], "."))
-	mainConfig.SetConfigType(nameParts[len(nameParts)-1])
+	config.SetConfigName(strings.Join(nameParts[:len(nameParts)-1], "."))
+	config.SetConfigType(nameParts[len(nameParts)-1])
 
-	err := mainConfig.ReadInConfig()
+	err := config.ReadInConfig()
 	if err != nil {
 		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
-			mainConfig.SetDefault(ConfigGeneralLogOutput, "./app.log")
-			mainConfig.SetDefault(ConfigGeneralChannel, "")
-			mainConfig.SetDefault(ConfigGeneralSilentPost, false)
-			mainConfig.SetDefault(ConfigGeneralPostCurrentGamesOnStartup, false)
-			mainConfig.SetDefault(ConfigGeneralTimezone, "Europe/Moscow")
-			mainConfig.SetDefault(ConfigGeneralNotificationsChatId, "")
+			config.SetDefault(ConfigGeneralLogOutput, "./app.log")
+			config.SetDefault(ConfigGeneralChannel, "")
+			config.SetDefault(ConfigGeneralSilentPost, false)
+			config.SetDefault(ConfigGeneralPostCurrentGamesOnStartup, false)
+			config.SetDefault(ConfigGeneralTimezone, "Europe/Moscow")
+			config.SetDefault(ConfigGeneralNotificationsChatId, "")
 
-			mainConfig.SetDefault(ConfigTimingsAnnounceRecheckInterval, 3600)
-			mainConfig.SetDefault(ConfigTimingsGiveawayPostDelay, 10)
+			config.SetDefault(ConfigTimingsAnnounceRecheckInterval, 3600)
+			config.SetDefault(ConfigTimingsGiveawayPostDelay, 10)
 
-			mainConfig.SetDefault(ConfigEgsApiRecheckOnFail, true)
-			mainConfig.SetDefault(ConfigEgsApiRecheckOnFailDelay, 60)
+			config.SetDefault(ConfigEgsApiRecheckOnFail, true)
+			config.SetDefault(ConfigEgsApiRecheckOnFailDelay, 60)
 
-			mainConfig.SetDefault(ConfigRemindPostEnabled, true)
-			mainConfig.SetDefault(ConfigRemindPostDelay, 3600*6)
+			config.SetDefault(ConfigRemindPostEnabled, true)
+			config.SetDefault(ConfigRemindPostDelay, 3600*6)
 
-			if err := mainConfig.SafeWriteConfig(); err != nil {
+			if err := config.SafeWriteConfig(); err != nil {
 				return nil, err
 			}
 
-			if err = mainConfig.ReadInConfig(); err != nil {
+			if err = config.ReadInConfig(); err != nil {
 				return nil, err
 			}
 		} else {
@@ -65,8 +65,8 @@ func mainConfig(path string, trackChanges bool) (*viper.Viper, error) {
 	}
 
 	if trackChanges {
-		mainConfig.WatchConfig()
+		config.WatchConfig()
 	}
 
-	return mainConfig, err
+	return config, err
 }

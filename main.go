@@ -18,7 +18,7 @@ import (
 func main() {
 	workdir := getWorkdir()
 
-	mainConfig, err := mainConfig(filepath.Join(workdir, "config.toml"), true)
+	mainConfig, err := getMainConfig(filepath.Join(workdir, "config.toml"), true)
 	if err != nil {
 		Logger().Panic().Stack().Err(err).Send()
 	}
@@ -45,22 +45,29 @@ func main() {
 		os.Exit(1)
 	}
 
+	_, err = os.Stat(filepath.Join(workdir, ".runtime.json"))
+	if errors.Is(err, os.ErrNotExist) {
+		file, err := os.OpenFile(filepath.Join(workdir, ".runtime.json"), os.O_WRONLY|os.O_CREATE, 0666)
+		if err == nil {
+			file.Close()
+		}
+	}
+
 	runtimeData := viper.New()
 	runtimeData.AddConfigPath(workdir)
 	runtimeData.SetConfigName(".runtime")
 	runtimeData.SetConfigType("json")
-
-	saveConfig := make(chan bool, 1)
+	err = runtimeData.ReadInConfig()
+	if err != nil {
+		Logger().Error().Err(err).Send()
+	}
 
 	go func() {
 		for {
-			if !<-saveConfig {
-				continue
-			}
-
-			err := runtimeData.WriteConfig()
-			if err != nil {
-				Logger().Panic().Err(err).Send()
+			time.Sleep(time.Second * 5)
+			runtimeConfigSaveError := runtimeData.WriteConfig()
+			if runtimeConfigSaveError != nil {
+				Logger().Error().Err(runtimeConfigSaveError).Stack().Send()
 			}
 		}
 	}()
@@ -131,7 +138,6 @@ func main() {
 			} else {
 				runtimeData.Set("remind_post_id", "")
 				remindPostId = ""
-				saveConfig <- true
 			}
 
 			removeRemindPost = false
@@ -187,7 +193,6 @@ func main() {
 			} else {
 				remindPostId = newRemindPostId
 				runtimeData.Set("remind_post_id", remindPostId)
-				saveConfig <- true
 			}
 		} else {
 			// 30 seconds to update currency rates
