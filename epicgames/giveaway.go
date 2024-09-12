@@ -30,6 +30,7 @@ type Promotions []Promotion
 
 type RawGame struct {
 	Id          string              `json:"id"`
+	Namespace   string              `json:"namespace"`
 	Title       string              `json:"title"`
 	Description string              `json:"description"`
 	Images      []map[string]string `json:"keyImages"`
@@ -64,6 +65,7 @@ type RawGame struct {
 
 type Game struct {
 	Id          string
+	Namespace   string
 	Title       string
 	Description string
 	Publisher   string
@@ -118,6 +120,7 @@ func getGiveaway(url string) (*Giveaway, error) {
 		var localGameStruct = Game{}
 
 		localGameStruct.Id = rGame.Id
+		localGameStruct.Namespace = rGame.Namespace
 		localGameStruct.Title = rGame.Title
 
 		if len(rGame.Description) > 20 && rGame.Title != rGame.Description {

@@ -217,9 +217,10 @@ func (poster *Poster) PostCurrentGames(games []epicgames.Game) ([]string, error)
 	tpl, err := template.New("game.gohtml").
 		Funcs(
 			template.FuncMap{
-				"month":   GetMonth,
-				"convert": currency.Convert,
-				"format":  FormatMoney,
+				"month":     GetMonth,
+				"convert":   currency.Convert,
+				"format":    FormatMoney,
+				"platforms": Platforms,
 			},
 		).
 		ParseFiles(filepath.Join(poster.templateDir, "game.gohtml"))

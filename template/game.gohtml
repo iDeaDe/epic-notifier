@@ -2,8 +2,8 @@
 <b>Раздаётся игра {{.Game.Title}}</b>
 {{ if not .Game.AvailableRu  }}
 Недоступна для РФ аккаунтов
-{{ end }}
-{{ if ne .Game.Description "" -}}
+{{ end -}}
+{{ if ne .Game.Description "" }}
 {{ .Game.Description }}
 {{ end }}
 {{- if and (ne .Game.Price.Format "") (gt .Game.Price.Original 0.0) }}
@@ -15,6 +15,7 @@
 {{- if ne .Game.Developer "" }}
 Разработчик: {{ .Game.Developer }}
 {{- end }}
+Платформы: {{ platforms .Game }}
 
 <a href="{{ .Game.Url }}">Страница в магазине</a>
 

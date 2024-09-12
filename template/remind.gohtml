@@ -3,6 +3,6 @@
 <b>Напоминание!</b>
 
 Сегодня последний день раздачи:
-{{ range $index, $game := .Giveaway.NextGames }}
+{{ range $index, $game := .Giveaway.CurrentGames }}
 {{ add $index 1 }}. <a href="{{ $game.Url }}">{{ $game.Title }}</a>
 {{- end }}
