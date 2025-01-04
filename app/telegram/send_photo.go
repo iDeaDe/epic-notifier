@@ -11,7 +11,7 @@ type SendPhotoRequest struct {
 	Photo               io.ReadCloser
 	ChatId              string
 	Caption             string
-	ParseMode           ParseMode
+	ParseMode           parseMode
 	HasSpoiler          bool
 	DisableNotification bool
 	ProtectContent      bool
@@ -21,6 +21,10 @@ func (client *Client) SendPhoto(request *SendPhotoRequest) (*Message, error) {
 	body := &bytes.Buffer{}
 	bodyWriter := multipart.NewWriter(body)
 	imageWriter, err := bodyWriter.CreateFormFile("photo", "label")
+	if err != nil {
+		return nil, err
+	}
+
 	_, err = io.Copy(imageWriter, request.Photo)
 	if err != nil {
 		return nil, err

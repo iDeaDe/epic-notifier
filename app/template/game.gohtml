@@ -15,8 +15,6 @@
 {{- if ne .Game.Developer "" }}
 Разработчик: {{ .Game.Developer }}
 {{- end }}
-Платформы: {{ platforms .Game }}
-
 <a href="{{ .Game.Url }}">Страница в магазине</a>
 
 Игра доступна бесплатно до {{ .AvailabilityTime.Day }} {{ month .AvailabilityTime.Month }} {{ .AvailabilityTime.Format "15:04 MST" }}

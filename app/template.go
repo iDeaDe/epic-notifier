@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ideade/epic-notifier/epicgames"
+	"github.com/ideade/epic-notifier/app/epicgames"
 	"strconv"
 	"strings"
 	"time"
@@ -35,24 +35,17 @@ func FormatMoney(sum float64) string {
 }
 
 func Platforms(game epicgames.Game) string {
-	offer, err := epicgames.GetCatalogOffer(game.Namespace, game.Id, "ru-RU")
-	if err != nil {
-		Logger().Error().Err(err).Send()
-
-		return "Неизвестно"
-	}
-
-	platforms := offer.GetTagsByGroupName("platform")
+	platforms := game.Platforms
 	if len(platforms) == 0 {
 		return "Неизвестно"
 	}
 
 	builder := strings.Builder{}
-	builder.WriteString(platforms[0].Name)
+	builder.WriteString(platforms[0])
 
 	for _, platform := range platforms[1:] {
 		builder.WriteString(", ")
-		builder.WriteString(platform.Name)
+		builder.WriteString(platform)
 	}
 
 	return builder.String()

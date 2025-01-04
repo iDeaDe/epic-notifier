@@ -1,0 +1,21 @@
+[egs]
+recheck_on_fail = true
+recheck_on_fail_delay = 60
+locale = "ru"
+country = "KZ"
+
+[general]
+log_output = 'stdout'
+channel = '@helloworld'
+notifications_chat_id = '11111111'
+post_current_games_on_startup = true
+silent_post = false
+timezone = 'Europe/Moscow'
+
+[remind_post]
+delay = 21600
+enabled = true
+
+[timings]
+announce_recheck_interval = 3600
+giveaway_post_delay = 10

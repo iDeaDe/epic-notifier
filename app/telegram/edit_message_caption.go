@@ -4,7 +4,7 @@ type EditMessageCaptionRequest struct {
 	ChatId    string
 	MessageId string
 	Caption   string
-	ParseMode ParseMode
+	ParseMode parseMode
 }
 
 func (client *Client) EditMessageCaption(request *EditMessageCaptionRequest) (*Message, error) {

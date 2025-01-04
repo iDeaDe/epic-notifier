@@ -15,7 +15,7 @@ type InputMedia interface {
 type InputMediaPhoto struct {
 	Media      io.ReadCloser
 	Caption    string
-	ParseMode  ParseMode
+	ParseMode  parseMode
 	HasSpoiler bool
 }
 

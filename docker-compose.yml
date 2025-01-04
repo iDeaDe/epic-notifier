@@ -1,0 +1,22 @@
+services:
+  chrome:
+    image: chromedp/headless-shell:133.0.6905.0
+    networks:
+      - notifier
+    ports:
+      - "9222:9222/tcp"
+  notifier:
+    build:
+      dockerfile: docker/notifier/Dockerfile
+      target: run
+    networks:
+      - notifier
+    volumes:
+      - "./workdir:/app/data"
+    env_file:
+      - .env
+    depends_on:
+      - chrome
+
+networks:
+  notifier:

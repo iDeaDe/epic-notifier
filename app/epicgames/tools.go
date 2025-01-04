@@ -1,0 +1,100 @@
+package epicgames
+
+import (
+	"encoding/json"
+	"github.com/ideade/epic-notifier/app/epicgames/graphql"
+	"math"
+)
+
+func getGameThumbnail(images []map[string]string) string {
+	if len(images) == 0 {
+		return ""
+	}
+
+	for _, image := range images {
+		switch image["type"] {
+		case
+			"DieselStoreFrontTall",
+			"Thumbnail",
+			"VaultOpened",
+			"DieselStoreFrontWide":
+			return image["url"]
+		}
+	}
+
+	return images[0]["url"]
+}
+
+func getGames(link string) ([]rawGame, error) {
+	getLogger().Debug("Fetching new games from Epic Games API")
+	resp, err := getClient().Get(link)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	getLogger().Debug("Decoding JSON")
+	responseData := new(data)
+	err = json.NewDecoder(resp.Body).Decode(responseData)
+	if err != nil {
+		return nil, err
+	}
+	_ = resp.Body.Close()
+
+	rGames := responseData.Data.Catalog.SearchStore.Elements
+
+	return rGames, nil
+}
+
+func convertPrice(offerPrice price) gamePrice {
+	decimals := math.Pow(10, offerPrice.Total.Currency.Decimals)
+	originalPrice := 0.0
+	if decimals > 0 {
+		originalPrice = offerPrice.Total.Original / decimals
+	}
+
+	return gamePrice{
+		Original: originalPrice,
+		Format:   offerPrice.Total.FormatPrice.OriginalPrice,
+		Currency: offerPrice.Total.CurrencyCode,
+	}
+}
+
+func fillGameDetails(locale, country string, game *Game) error {
+	mapping, err := graphql.GetMappingByPageSlug(locale, game.Slug)
+	if err != nil {
+		return err
+	}
+
+	catalogOffer, err := graphql.GetCatalogOffer(locale, country, mapping.Mappings.OfferId, mapping.SandboxId)
+	if err != nil {
+		return err
+	}
+
+	var platforms []string
+	var genres []string
+
+	for _, tag := range catalogOffer.Tags {
+		switch tag.GroupName {
+		case "platform":
+			platforms = append(platforms, tag.Name)
+		case "genre":
+			genres = append(genres, tag.Name)
+		}
+	}
+
+	if game.Developer == "" {
+		game.Developer = catalogOffer.DeveloperDisplayName
+	}
+
+	if game.Publisher == "" {
+		game.Publisher = catalogOffer.PublisherDisplayName
+	}
+
+	game.Price = convertPrice(catalogOffer.Price)
+	game.CountriesBlacklist = catalogOffer.CountriesBlacklist
+	game.Platforms = platforms
+	game.Genres = genres
+
+	return nil
+}

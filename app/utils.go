@@ -1,6 +1,7 @@
 package main
 
 import (
+	"go.uber.org/zap"
 	"io"
 	"os"
 	"path/filepath"
@@ -32,6 +33,7 @@ func downloadFileByLink(link string) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
-func logSleepTime(duration time.Duration) {
-	Logger().Info().Msg("going to sleep till " + time.Now().Add(duration).Format(time.RFC1123))
+func sleep(logger *zap.Logger, duration time.Duration) {
+	logger.Info("going to sleep till " + time.Now().Add(duration).Format(time.RFC1123))
+	time.Sleep(duration)
 }

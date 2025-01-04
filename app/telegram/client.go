@@ -6,21 +6,21 @@ import (
 	"net/url"
 )
 
-type ApiMethod = string
+type apiMethod = string
 
 // API Methods
 const (
-	MethodSendMessage        ApiMethod = "sendMessage"
-	MethodSendPhoto          ApiMethod = "sendPhoto"
-	MethodSendMediaGroup     ApiMethod = "sendMediaGroup"
-	MethodEditMessageCaption ApiMethod = "editMessageCaption"
-	MethodDeleteMessage      ApiMethod = "deleteMessage"
+	MethodSendMessage        apiMethod = "sendMessage"
+	MethodSendPhoto          apiMethod = "sendPhoto"
+	MethodSendMediaGroup     apiMethod = "sendMediaGroup"
+	MethodEditMessageCaption apiMethod = "editMessageCaption"
+	MethodDeleteMessage      apiMethod = "deleteMessage"
 )
 
 type Request struct {
 	Body   io.Reader
 	Params *map[string]string
-	Name   ApiMethod
+	Name   apiMethod
 
 	postContentType string
 }
@@ -29,14 +29,6 @@ type Client struct {
 	Token      string
 	httpClient *http.Client
 }
-
-var Reserved = map[string]string{
-	"<": "&lt;",
-	">": "&gt;",
-	"&": "&amp;",
-}
-
-var httpClient = http.DefaultClient
 
 func NewClient(token string, httpClient *http.Client) *Client {
 	return &Client{token, httpClient}
@@ -66,7 +58,7 @@ func (client *Client) send(request Request) (*http.Response, error) {
 		clientRequest.Header.Set("Content-Type", request.postContentType)
 	}
 
-	resp, err := httpClient.Do(clientRequest)
+	resp, err := client.httpClient.Do(clientRequest)
 
 	if err != nil {
 		return nil, err

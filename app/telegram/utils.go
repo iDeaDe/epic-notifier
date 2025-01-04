@@ -6,6 +6,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strings"
 )
 
 const ApiUrl = "https://api.telegram.org/"
@@ -15,7 +16,7 @@ type Telegram struct {
 	ChannelName string
 }
 
-type ParseMode string
+type parseMode string
 
 type Response struct {
 	Result      interface{} `json:"result"`
@@ -24,8 +25,8 @@ type Response struct {
 }
 
 var (
-	ParseModeHtml     ParseMode = "HTML"
-	ParseModeMarkdown ParseMode = "MarkdownV2"
+	ParseModeHtml     parseMode = "HTML"
+	ParseModeMarkdown parseMode = "MarkdownV2"
 )
 
 var (
@@ -33,6 +34,48 @@ var (
 	DefaultRequestErr = errors.New("the request failed")
 	EmptyBodyErr      = errors.New("response body is empty")
 )
+
+var reservedHtmlSymbols = map[string]string{
+	"<": "&lt;",
+	">": "&gt;",
+	"&": "&amp;",
+}
+
+var reservedMarkdownSymbols = []string{
+	"_",
+	"*",
+	"[",
+	"]",
+	"(",
+	")",
+	"~",
+	"`",
+	">",
+	"#",
+	"+",
+	"-",
+	"=",
+	"|",
+	"{",
+	"}",
+	".",
+	"!",
+}
+
+func EscapeString(s string, mode parseMode) string {
+	switch mode {
+	case ParseModeMarkdown:
+		for _, symbol := range reservedMarkdownSymbols {
+			s = strings.ReplaceAll(s, symbol, "\\"+symbol)
+		}
+	case ParseModeHtml:
+		for symbol, replacement := range reservedHtmlSymbols {
+			s = strings.ReplaceAll(s, symbol, replacement)
+		}
+	}
+
+	return s
+}
 
 func decodeResponse(response *http.Response, target any) error {
 	bodyStruct := Response{}
