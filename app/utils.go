@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/ideade/epic-notifier/app/currency"
 	"go.uber.org/zap"
 	"io"
 	"os"
@@ -37,3 +38,12 @@ func sleep(logger *zap.Logger, duration time.Duration) {
 	logger.Info("going to sleep till " + time.Now().Add(duration).Format(time.RFC1123))
 	time.Sleep(duration)
 }
+
+type NopCurrencyUpdater struct{}
+
+func (ncu *NopCurrencyUpdater) SetErrorHandler(func(error)) {}
+func (ncu *NopCurrencyUpdater) Convert(sum float64, _ currency.Pair) float64 {
+	return sum
+}
+func (ncu *NopCurrencyUpdater) AddPair(currency.Pair) {}
+func (ncu *NopCurrencyUpdater) Update()               {}

@@ -26,18 +26,16 @@ func newApiClient(httpClient *http.Client, token string) *apiClient {
 }
 
 func (client *apiClient) getRates(baseCurrency string, currencies []string) (map[Pair]float64, error) {
-	requestUrl, err := url.Parse(baseUrl)
-	if err != nil {
-		return nil, err
-	}
-	requestUrl = requestUrl.JoinPath("latest")
-	qVal := requestUrl.Query()
-	qVal.Add("apikey", client.token)
-	qVal.Add("base_currency", baseCurrency)
+	query := url.Values{}
+	query.Set("apikey", client.token)
+	query.Set("base_currency", baseCurrency)
 	for _, currency := range currencies {
-		qVal.Add("currencies[]", currency)
+		query.Add("currencies[]", currency)
 	}
-	requestUrl.RawQuery = qVal.Encode()
+
+	requestUrl, _ := url.Parse(baseUrl)
+	requestUrl = requestUrl.JoinPath("latest")
+	requestUrl.RawQuery = query.Encode()
 
 	response, err := client.httpClient.Get(requestUrl.String())
 	if err != nil {

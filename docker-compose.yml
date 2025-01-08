@@ -1,10 +1,4 @@
 services:
-  chrome:
-    image: chromedp/headless-shell:133.0.6905.0
-    networks:
-      - notifier
-    ports:
-      - "9222:9222/tcp"
   notifier:
     build:
       dockerfile: docker/notifier/Dockerfile

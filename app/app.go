@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -124,4 +127,34 @@ func formatResponseLog(response *http.Response) (string, error) {
 	}
 
 	return result.String(), nil
+}
+
+var countriesMap = map[string]string{}
+
+type country struct {
+	Name struct {
+		Ru string `json:"ru"`
+		En string `json:"en"`
+	} `json:"name"`
+}
+
+func loadCountriesMap(workdir string) error {
+	countriesFile := filepath.Join(workdir, "countries.json")
+	content, err := os.ReadFile(countriesFile)
+	if err != nil {
+		return err
+	}
+
+	sourceMap := make(map[string]country)
+
+	err = json.Unmarshal(content, &sourceMap)
+	if err != nil {
+		return err
+	}
+
+	for key, value := range sourceMap {
+		countriesMap[key] = value.Name.Ru
+	}
+
+	return nil
 }

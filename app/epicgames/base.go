@@ -8,7 +8,6 @@ import (
 
 var logger *zap.Logger
 var client *http.Client
-var chromeHost string
 
 func getLogger() *zap.Logger {
 	if logger == nil {
@@ -33,8 +32,4 @@ func SetLogger(newLogger *zap.Logger) {
 func SetClient(newClient *http.Client) {
 	graphql.SetClient(newClient)
 	client = newClient
-}
-
-func SetChromeHost(newHost string) {
-	chromeHost = newHost
 }

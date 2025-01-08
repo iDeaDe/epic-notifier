@@ -12,6 +12,9 @@ RUN go build -C . -tags timetzdata -o notifier
 FROM alpine AS run
 
 WORKDIR /app
+
+ADD https://raw.githubusercontent.com/iDeaDe/nemo.travel.geodata/refs/heads/master/countries.json /app/data/countries.json
+
 COPY --from=build /go/src/notifier/app/template /app/data/template
 COPY --from=build /go/src/notifier/app/notifier /app/notifier
 

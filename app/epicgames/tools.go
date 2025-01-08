@@ -83,6 +83,10 @@ func fillGameDetails(locale, country string, game *Game) error {
 		}
 	}
 
+	if len(catalogOffer.Description) > 20 && catalogOffer.Title != catalogOffer.Description {
+		game.Description = catalogOffer.Description
+	}
+
 	if game.Developer == "" {
 		game.Developer = catalogOffer.DeveloperDisplayName
 	}

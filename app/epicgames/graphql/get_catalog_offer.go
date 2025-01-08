@@ -1,6 +1,7 @@
 package graphql
 
 type CatalogOffer struct {
+	Title                string     `json:"title"`
 	DeveloperDisplayName string     `json:"developerDisplayName"`
 	PublisherDisplayName string     `json:"publisherDisplayName"`
 	Description          string     `json:"description"`

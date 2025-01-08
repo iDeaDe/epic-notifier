@@ -1,34 +1,73 @@
 package currency
 
 import (
-	"maps"
 	"net/http"
+	"sync"
 )
 
-var exchangeRates = map[Pair]float64{}
-
-type Updater struct {
-	currencies        map[string][]string
-	currencyApiClient *apiClient
+type Updater interface {
+	SetErrorHandler(func(error))
+	AddPair(Pair)
+	Convert(float64, Pair) float64
+	Update()
 }
 
-func NewUpdater(client *http.Client, token string) *Updater {
-	return &Updater{currencyApiClient: newApiClient(client, token), currencies: map[string][]string{}}
+type BackgroundUpdater struct {
+	apiClient    *apiClient
+	errorHandler func(error)
+
+	mu         sync.RWMutex
+	rates      map[Pair]float64
+	currencies map[string][]string
 }
 
-func (updater *Updater) AddPair(pair Pair) {
-	updater.currencies[pair.From] = append(updater.currencies[pair.From], pair.To)
+func NewBackgroundUpdater(client *http.Client, token string) *BackgroundUpdater {
+	return &BackgroundUpdater{
+		apiClient:  newApiClient(client, token),
+		rates:      map[Pair]float64{},
+		currencies: map[string][]string{},
+	}
 }
 
-func (updater *Updater) Update() error {
-	for baseCurrency, currencies := range updater.currencies {
-		rates, err := updater.currencyApiClient.getRates(baseCurrency, currencies)
-		if err != nil {
-			return err
-		}
+func (backgroundUpdater *BackgroundUpdater) SetErrorHandler(handler func(error)) {
+	backgroundUpdater.errorHandler = handler
+}
 
-		maps.Copy(exchangeRates, rates)
+func (backgroundUpdater *BackgroundUpdater) AddPair(pair Pair) {
+	backgroundUpdater.mu.Lock()
+	defer backgroundUpdater.mu.Unlock()
+
+	backgroundUpdater.currencies[pair.From] = append(backgroundUpdater.currencies[pair.From], pair.To)
+}
+
+func (backgroundUpdater *BackgroundUpdater) Convert(sum float64, pair Pair) float64 {
+	backgroundUpdater.mu.RLock()
+	defer backgroundUpdater.mu.RUnlock()
+
+	if rate, ok := backgroundUpdater.rates[pair]; ok {
+		return sum * rate
 	}
 
-	return nil
+	return sum
+}
+
+func (backgroundUpdater *BackgroundUpdater) Update() {
+	go func() {
+		newRates := map[Pair]float64{}
+
+		for baseCurrency, currencies := range backgroundUpdater.currencies {
+			rates, err := backgroundUpdater.apiClient.getRates(baseCurrency, currencies)
+			if err != nil && backgroundUpdater.errorHandler != nil {
+				backgroundUpdater.errorHandler(err)
+			}
+
+			for pair, rate := range rates {
+				newRates[pair] = rate
+			}
+		}
+
+		backgroundUpdater.mu.Lock()
+		backgroundUpdater.rates = newRates
+		backgroundUpdater.mu.Unlock()
+	}()
 }

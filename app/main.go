@@ -6,6 +6,7 @@ import (
 	"github.com/ideade/epic-notifier/app/epicgames"
 	"github.com/ideade/epic-notifier/app/logging"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"os"
@@ -19,6 +20,7 @@ import (
 func main() {
 	workdir := getWorkdir()
 
+	//region .env
 	dotEnvExists := true
 	if _, err := os.Stat(filepath.Join(workdir, ".env")); errors.Is(err, os.ErrNotExist) {
 		dotEnvExists = false
@@ -29,17 +31,27 @@ func main() {
 			log.Fatalln(err)
 		}
 	}
+	//endregion
 
+	//region logger
 	appEnvironment := logging.EnvDevelopment
 	if os.Getenv("ENV") == "production" {
 		appEnvironment = logging.EnvProduction
 	}
 
 	logger := logging.NewWithEnv(appEnvironment)
+	//endregion
 
-	mainConfig, err := getMainConfig(filepath.Join(workdir, "config.toml"), true)
-	if err != nil {
-		logger.Panic(err.Error())
+	var err error
+
+	if err = loadCountriesMap(workdir); err != nil {
+		logger.Panic("failed to load countries map", zap.Error(err))
+	}
+
+	//region main config loading and required data check
+	var mainConfig *Config
+	if mainConfig, err = getMainConfig(filepath.Join(workdir, "config.toml"), true); err != nil {
+		logger.Panic("failed to load main config", zap.Error(err))
 	}
 
 	if mainConfig.General.Channel == "" {
@@ -52,12 +64,15 @@ func main() {
 		logger.Error("TELEGRAM_TOKEN env variable is required")
 		os.Exit(1)
 	}
+	//endregion
 
+	//region runtime data file
 	_, err = os.Stat(filepath.Join(workdir, ".runtime.json"))
 	if errors.Is(err, os.ErrNotExist) {
-		file, err := os.OpenFile(filepath.Join(workdir, ".runtime.json"), os.O_WRONLY|os.O_CREATE, 0666)
+		var file *os.File
+		file, err = os.OpenFile(filepath.Join(workdir, ".runtime.json"), os.O_WRONLY|os.O_CREATE, 0666)
 		if err == nil {
-			file.Close()
+			_ = file.Close()
 		}
 	}
 
@@ -67,7 +82,7 @@ func main() {
 	runtimeData.SetConfigType("json")
 	err = runtimeData.ReadInConfig()
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Error("failed to read runtime data", zap.Error(err))
 	}
 
 	go func() {
@@ -75,10 +90,11 @@ func main() {
 			time.Sleep(time.Second * 5)
 			runtimeConfigSaveError := runtimeData.WriteConfig()
 			if runtimeConfigSaveError != nil {
-				logger.Error(runtimeConfigSaveError.Error())
+				logger.Error("failed to write new runtime data", zap.Error(runtimeConfigSaveError))
 			}
 		}
 	}()
+	//endregion
 
 	httpClient := &http.Client{Transport: &LoggingRoundTripper{logger, http.DefaultTransport}}
 
@@ -86,46 +102,45 @@ func main() {
 
 	epicgames.SetLogger(logger)
 	epicgames.SetClient(httpClient)
-	epicgames.SetChromeHost(os.Getenv("CHROME_HOST"))
 
 	telegramClient := telegram.NewClient(telegramToken, http.DefaultClient) // using default client because of huge file content in logs
+
+	//region telegram channel games poster
 	poster := NewPoster(telegramClient, mainConfig.General.Channel)
 	poster.SetSilentMode(mainConfig.General.SilentPost)
 	poster.SetTemplateDir(filepath.Join(workdir, "template"))
-	if err = poster.SetTimezone(mainConfig.General.Timezone); err != nil {
-		logger.Panic(err.Error())
+
+	var timezone *time.Location
+	if timezone, err = time.LoadLocation(mainConfig.General.Timezone); err == nil {
+		poster.SetTimezone(timezone)
+	} else {
+		logger.Panic("failed to load timezone", zap.Error(err))
 	}
+
+	poster.SetTimezone(timezone)
+	//endregion
 
 	if mainConfig.General.NotificationsChatId != "" {
 		newLogger := logging.AddNotificationHook(logger, telegramClient, mainConfig.General.NotificationsChatId)
 		*logger = *newLogger
 	}
 
-	updateCurrencies := make(chan bool, 1)
-
+	//region currencies updater
 	currenciesToken := os.Getenv("CURRENCIES_TOKEN")
+
 	if currenciesToken != "" {
-		currencyUpdater := currency.NewUpdater(httpClient, currenciesToken)
-		currencyUpdater.AddPair(*currency.NewPair("RUB", "USD"))
-		currencyUpdater.AddPair(*currency.NewPair("KZT", "USD"))
-		currencyUpdater.AddPair(*currency.NewPair("KZT", "RUB"))
-		if err = currencyUpdater.Update(); err != nil {
-			logger.Error(err.Error())
-		}
-
-		go func() {
-			for {
-				if !<-updateCurrencies {
-					continue
-				}
-
-				err := currencyUpdater.Update()
-				if err != nil {
-					logger.Error(err.Error())
-				}
-			}
-		}()
+		currencyUpdater = currency.NewBackgroundUpdater(httpClient, currenciesToken)
+	} else {
+		currencyUpdater = &NopCurrencyUpdater{}
 	}
+
+	currencyUpdater.SetErrorHandler(func(err error) {
+		logger.Error("failed to update currencies", zap.Error(err))
+	})
+	currencyUpdater.AddPair(*currency.NewPair("KZT", "USD"))
+	currencyUpdater.AddPair(*currency.NewPair("KZT", "RUB"))
+	currencyUpdater.Update()
+	//endregion
 
 	postCurrent := mainConfig.General.PostCurrentGamesOnStartup
 	postAnnounce := postCurrent
@@ -135,13 +150,13 @@ func main() {
 		remindPostId := runtimeData.GetString("remind_post_id")
 
 		if removeRemindPost && remindPostId != "" {
-			_, err := telegramClient.DeleteMessage(&telegram.DeleteMessageRequest{
+			_, err = telegramClient.DeleteMessage(&telegram.DeleteMessageRequest{
 				ChatId:    mainConfig.General.Channel,
 				MessageId: remindPostId,
 			})
 
 			if err != nil {
-				logger.Error(err.Error())
+				logger.Error("failed to remove telegram post", zap.Error(err))
 			} else {
 				runtimeData.Set("remind_post_id", "")
 				remindPostId = ""
@@ -150,15 +165,16 @@ func main() {
 			removeRemindPost = false
 		}
 
-		giveaway, err := epicgames.GetGiveaway(mainConfig.Egs.Locale, mainConfig.Egs.Country)
+		var giveaway *epicgames.Giveaway
+		giveaway, err = epicgames.GetGiveaway(mainConfig.Egs.Locale, mainConfig.Egs.Country)
 		if err != nil {
 			if mainConfig.Egs.RecheckOnFail {
-				logger.Error(err.Error())
+				logger.Error("failed to get egs giveaway", zap.Error(err))
 
 				time.Sleep(mainConfig.Egs.RecheckOnFailDelay * time.Second)
 				continue
 			} else {
-				logger.Panic(err.Error())
+				logger.Panic("failed to get egs giveaway", zap.Error(err))
 			}
 		}
 
@@ -170,43 +186,45 @@ func main() {
 		}
 
 		if postCurrent {
-			_, err := poster.PostCurrentGames(giveaway.CurrentGames)
+			_, err = poster.PostCurrentGames(giveaway.CurrentGames)
 			if err != nil {
-				logger.Panic(err.Error())
+				logger.Panic("failed to post game", zap.Error(err))
 				continue
 			}
 		}
 
 		if postAnnounce {
-			_, err := poster.PostAnnounce(giveaway)
+			_, err = poster.PostAnnounce(giveaway)
 			if err != nil {
-				logger.Panic(err.Error())
+				logger.Panic("failed to post announce", zap.Error(err))
 			}
 		}
 
 		if mainConfig.RemindPost.Enabled && remindPostId == "" {
 			sleepTime := time.Until(nextGiveawayDate) - mainConfig.RemindPost.Delay*time.Second
-			sleep(logger, sleepTime*time.Second)
+			sleep(logger, sleepTime)
 
-			newRemindPostId, err := poster.PostRemind(giveaway)
+			var newRemindPostId string
+			newRemindPostId, err = poster.PostRemind(giveaway)
 			if err != nil {
-				logger.Panic(err.Error())
+				logger.Panic("failed to post remind post", zap.Error(err))
 			} else {
 				remindPostId = newRemindPostId
 				runtimeData.Set("remind_post_id", remindPostId)
 			}
-		} else {
-			// 30 seconds to update currency rates
-			sleepTime := time.Until(nextGiveawayDate) - time.Second*30
-			sleep(logger, sleepTime)
 		}
 
-		updateCurrencies <- true
+		// 30 seconds to update currency rates
+		sleepTime := time.Until(nextGiveawayDate) - time.Second*30
+		sleep(logger, sleepTime)
+
+		currencyUpdater.Update()
+
 		removeRemindPost = true
 		postCurrent = true
 		postAnnounce = true
 
-		sleepTime := time.Until(nextGiveawayDate) + time.Second*mainConfig.Timings.GiveawayPostDelay
+		sleepTime = time.Until(nextGiveawayDate) + time.Second*mainConfig.Timings.GiveawayPostDelay
 		sleep(logger, sleepTime)
 	}
 }

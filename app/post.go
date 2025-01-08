@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"github.com/ideade/epic-notifier/app/currency"
 	"github.com/ideade/epic-notifier/app/epicgames"
 	"github.com/ideade/epic-notifier/app/telegram"
 	"html/template"
@@ -29,10 +28,8 @@ func NewPoster(client *telegram.Client, chatId string) *Poster {
 	}
 }
 
-func (poster *Poster) SetTimezone(tz string) error {
-	var err error
-	poster.Timezone, err = time.LoadLocation(tz)
-	return err
+func (poster *Poster) SetTimezone(tz *time.Location) {
+	poster.Timezone = tz
 }
 
 func (poster *Poster) SetTemplateDir(dir string) {
@@ -52,10 +49,11 @@ func (poster *Poster) PostCurrentGames(games []epicgames.Game) ([]string, error)
 	tpl, err := template.New("game.gohtml").
 		Funcs(
 			template.FuncMap{
-				"month":     GetMonth,
-				"convert":   currency.Convert,
-				"format":    FormatMoney,
-				"platforms": Platforms,
+				"month":                GetMonth,
+				"format":               FormatMoney,
+				"platforms":            Platforms,
+				"join":                 Join,
+				"blacklistedCountries": BlacklistedCountries,
 			},
 		).
 		ParseFiles(filepath.Join(poster.templateDir, "game.gohtml"))

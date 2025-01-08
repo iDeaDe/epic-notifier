@@ -193,8 +193,10 @@ func GetGiveaway(locale, country string) (*Giveaway, error) {
 			}
 		}
 
-		if err = fillGameDetails(locale, country, &localGameStruct); err != nil {
-			getLogger().Error(err.Error())
+		if localGameStruct.gameType == gameTypeCurrent {
+			if err = fillGameDetails(locale, country, &localGameStruct); err != nil {
+				getLogger().Error(err.Error())
+			}
 		}
 
 		switch localGameStruct.gameType {
