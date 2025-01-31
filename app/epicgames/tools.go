@@ -66,7 +66,12 @@ func fillGameDetails(locale, country string, game *Game) error {
 		return err
 	}
 
-	catalogOffer, err := graphql.GetCatalogOffer(locale, country, mapping.Mappings.OfferId, mapping.SandboxId)
+	offerId := mapping.Mappings.OfferId
+	if offerId == "" {
+		offerId = game.Id
+	}
+
+	catalogOffer, err := graphql.GetCatalogOffer(locale, country, offerId, mapping.SandboxId)
 	if err != nil {
 		return err
 	}
