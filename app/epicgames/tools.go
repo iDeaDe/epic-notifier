@@ -2,6 +2,7 @@ package epicgames
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/ideade/epic-notifier/app/epicgames/graphql"
 	"math"
 )
@@ -17,7 +18,8 @@ func getGameThumbnail(images []map[string]string) string {
 			"DieselStoreFrontTall",
 			"Thumbnail",
 			"VaultOpened",
-			"DieselStoreFrontWide":
+			"DieselStoreFrontWide",
+			"GalleryImage":
 			return image["url"]
 		}
 	}
@@ -74,6 +76,29 @@ func fillGameDetails(locale, country string, game *Game) error {
 	catalogOffer, err := graphql.GetCatalogOffer(locale, country, offerId, mapping.SandboxId)
 	if err != nil {
 		return err
+	}
+
+	if catalogOffer == nil {
+		var productInfo *StoreProductInfo
+		productInfo, err = FetchStoreProductInfo(game.Slug)
+		if err != nil {
+			return err
+		}
+
+		for _, page := range productInfo.Pages {
+			if page.Offer != nil && page.Offer.HasOffer && page.Offer.Id != "" {
+				offerId = page.Offer.Id
+			}
+		}
+
+		catalogOffer, err = graphql.GetCatalogOffer(locale, country, offerId, mapping.SandboxId)
+		if err != nil {
+			return err
+		}
+	}
+
+	if catalogOffer == nil {
+		return errors.New("failed to fetch detailed offer info")
 	}
 
 	var platforms []string
