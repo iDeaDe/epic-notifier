@@ -31,10 +31,13 @@ func doRequest(req graphqlRequest, response any) error {
 	query.Set("variables", string(variables))
 	query.Set("extensions", string(req.extensions))
 
-	requestUrl, _ := url.Parse("https://graphql.epicgames.com/graphql")
+	requestUrl, _ := url.Parse("https://store.epicgames.com/graphql")
 	requestUrl.RawQuery = query.Encode()
 
-	resp, err := client.Get(requestUrl.String())
+	request, _ := http.NewRequest(http.MethodGet, requestUrl.String(), nil)
+	request.Header.Set("User-Agent", "okhttp/5.1.0")
+
+	resp, err := client.Do(request)
 	if err != nil {
 		return err
 	}
