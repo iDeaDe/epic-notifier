@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -193,7 +194,7 @@ func GetGiveaway(locale, country string) (*Giveaway, error) {
 			}
 		}
 
-		if localGameStruct.gameType == gameTypeCurrent {
+		if localGameStruct.gameType == gameTypeCurrent && !strings.Contains(localGameStruct.Url, "/bundles/") {
 			if err = fillGameDetails(locale, country, &localGameStruct); err != nil {
 				getLogger().Error(err.Error())
 			}
