@@ -2,16 +2,18 @@ package main
 
 import (
 	"errors"
-	"github.com/ideade/epic-notifier/app/currency"
-	"github.com/ideade/epic-notifier/app/epicgames"
-	"github.com/ideade/epic-notifier/app/logging"
-	"github.com/joho/godotenv"
-	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/ideade/epic-notifier/app/currency"
+	"github.com/ideade/epic-notifier/app/currency/exchangerate"
+	"github.com/ideade/epic-notifier/app/epicgames"
+	"github.com/ideade/epic-notifier/app/logging"
+	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 
 	"github.com/ideade/epic-notifier/app/telegram"
 	"github.com/spf13/viper"
@@ -50,7 +52,7 @@ func main() {
 
 	//region main config loading and required data check
 	var mainConfig *Config
-	if mainConfig, err = getMainConfig(filepath.Join(workdir, "config.toml"), true); err != nil {
+	if mainConfig, err = getMainConfig(filepath.Join(workdir, "config.toml"), false); err != nil {
 		logger.Panic("failed to load main config", zap.Error(err))
 	}
 
@@ -129,7 +131,8 @@ func main() {
 	currenciesToken := os.Getenv("CURRENCIES_TOKEN")
 
 	if currenciesToken != "" {
-		currencyUpdater = currency.NewBackgroundUpdater(httpClient, currenciesToken)
+		currencyUpdater = exchangerate.NewBackgroundUpdater(httpClient, currenciesToken)
+		//currencyUpdater = currencyapi.NewBackgroundUpdater(httpClient, currenciesToken)
 	} else {
 		currencyUpdater = &NopCurrencyUpdater{}
 	}

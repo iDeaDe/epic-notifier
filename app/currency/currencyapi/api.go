@@ -1,10 +1,12 @@
-package currency
+package currencyapi
 
 import (
 	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/url"
+
+	"github.com/ideade/epic-notifier/app/currency"
 )
 
 const baseUrl = "https://api.currencyapi.com/v3"
@@ -25,12 +27,12 @@ func newApiClient(httpClient *http.Client, token string) *apiClient {
 	return &apiClient{httpClient, token}
 }
 
-func (client *apiClient) getRates(baseCurrency string, currencies []string) (map[Pair]float64, error) {
+func (client *apiClient) getRates(baseCurrency string, currencies []string) (map[currency.Pair]float64, error) {
 	query := url.Values{}
 	query.Set("apikey", client.token)
 	query.Set("base_currency", baseCurrency)
-	for _, currency := range currencies {
-		query.Add("currencies[]", currency)
+	for _, currencyItem := range currencies {
+		query.Add("currencies[]", currencyItem)
 	}
 
 	requestUrl, _ := url.Parse(baseUrl)
@@ -55,10 +57,10 @@ func (client *apiClient) getRates(baseCurrency string, currencies []string) (map
 		return nil, err
 	}
 
-	rates := make(map[Pair]float64)
+	rates := make(map[currency.Pair]float64)
 
 	for _, rate := range responseStruct.Data {
-		pair := NewPair(baseCurrency, rate.Code)
+		pair := currency.NewPair(baseCurrency, rate.Code)
 		rates[*pair] = rate.Value
 	}
 

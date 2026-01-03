@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/ideade/epic-notifier/app/currency"
-	"github.com/ideade/epic-notifier/app/epicgames"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ideade/epic-notifier/app/currency"
+	"github.com/ideade/epic-notifier/app/epicgames"
 )
 
 var Months = []string{
