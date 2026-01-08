@@ -1,0 +1,16 @@
+services:
+  notifier:
+    build:
+      dockerfile: docker/notifier/Dockerfile
+      target: run
+    networks:
+      - notifier
+    volumes:
+      - "./workdir:/app/data"
+    env_file:
+      - .env
+    depends_on:
+      - chrome
+
+networks:
+  notifier:

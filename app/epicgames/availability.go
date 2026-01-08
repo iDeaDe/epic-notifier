@@ -1,72 +1,91 @@
 package epicgames
 
 import (
+	"errors"
 	"time"
 )
 
-type GameType = byte
-type GiveawayTime = byte
+type gameType = byte
+type giveawayTime = byte
 
-const DateTimeFormat = time.RFC3339
+const dateTimeFormat = time.RFC3339
 
 const (
-	UnknownType GameType = iota
-	Current
-	Upcoming
+	gameTypeUnknown gameType = iota
+	gameTypeCurrent
+	gameTypeUpcoming
 )
 
 const (
-	UnknownTime GiveawayTime = iota
-	Past
-	Now
-	Future
+	giveawayTimeUnknown giveawayTime = iota
+	giveawayTimePast
+	giveawayTimeNow
+	giveawayTimeFuture
 )
 
-func GetType(game *RawGame) (GameType, *PromotionalOffer) {
+func getType(game *rawGame) (gameType, *promotionalOffer) {
 	current := &game.Promotions.Current
 	upcoming := &game.Promotions.Upcoming
 
 	if len(*current) == 0 && len(*upcoming) == 0 {
-		return UnknownType, nil
+		return gameTypeUnknown, nil
 	}
 
 	if len(*upcoming) == 0 && len(*current) > 0 {
 		giveawayTime, promotionalOffer, err := getGiveawayTime(current)
-		if err == nil {
+		if err != nil {
+			getLogger().Error(err.Error())
+		} else {
 			return selectGameType(giveawayTime), promotionalOffer
 		}
 	}
 
 	if len(*current) == 0 && len(*upcoming) > 0 {
 		giveawayTime, promotionalOffer, err := getGiveawayTime(upcoming)
-		if err == nil {
+		if err != nil {
+			getLogger().Error(err.Error())
+		} else {
 			return selectGameType(giveawayTime), promotionalOffer
 		}
 	}
 
 	if len(*current) > 0 && len(*upcoming) > 0 {
 		giveawayTime, promotionalOffer, err := getGiveawayTime(current)
-		if giveawayTime != UnknownTime && err == nil {
+		if giveawayTime != giveawayTimeUnknown && err == nil {
 			return selectGameType(giveawayTime), promotionalOffer
+		}
+
+		if err != nil {
+			getLogger().Error(err.Error())
 		}
 
 		giveawayTime, promotionalOffer, err = getGiveawayTime(upcoming)
 		if err == nil {
 			return selectGameType(giveawayTime), promotionalOffer
+		} else {
+			getLogger().Error(err.Error())
 		}
 	}
 
-	return UnknownType, nil
+	return gameTypeUnknown, nil
 }
 
-func GetTime(offer PromotionalOffer) (*time.Time, *time.Time, error) {
-	startDate, err := time.Parse(DateTimeFormat, offer.StartDate)
+func getTime(offer promotionalOffer) (*time.Time, *time.Time, error) {
+	if offer.StartDate == "" {
+		return nil, nil, errors.New("empty start date")
+	}
+
+	if offer.EndDate == "" {
+		return nil, nil, errors.New("empty end date")
+	}
+
+	startDate, err := time.Parse(dateTimeFormat, offer.StartDate)
 
 	if err != nil {
 		return &startDate, nil, err
 	}
 
-	endDate, err := time.Parse(DateTimeFormat, offer.EndDate)
+	endDate, err := time.Parse(dateTimeFormat, offer.EndDate)
 
 	if err != nil {
 		return nil, &endDate, err
@@ -75,33 +94,38 @@ func GetTime(offer PromotionalOffer) (*time.Time, *time.Time, error) {
 	return &startDate, &endDate, nil
 }
 
-func selectGameType(giveawayTime GiveawayTime) GameType {
+func selectGameType(giveawayTime giveawayTime) gameType {
 	switch giveawayTime {
-	case Now:
-		return Current
-	case Future:
-		return Upcoming
+	case giveawayTimeNow:
+		return gameTypeCurrent
+	case giveawayTimeFuture:
+		return gameTypeUpcoming
+	default:
+		return gameTypeUnknown
 	}
-
-	return UnknownType
 }
 
-func getGiveawayTime(promotions *Promotions) (GiveawayTime, *PromotionalOffer, error) {
+func getGiveawayTime(promotions *promotions) (giveawayTime, *promotionalOffer, error) {
 	now := time.Now()
 
-	gaTime := UnknownTime
+	gaTime := giveawayTimeUnknown
 
 	promotionalOffers := (*promotions)[0].PromotionalOffers
 
-	var neededPromotionalOffer PromotionalOffer
+	var neededPromotionalOffer promotionalOffer
 
 	var startDate, endDate *time.Time
 	var firstValidIndex int
 	var err error
 
 	for index, promotionalOffer := range promotionalOffers {
-		startDate, endDate, err = GetTime(promotionalOffer)
+		startDate, endDate, err = getTime(promotionalOffer)
 		if err != nil {
+			getLogger().Error(err.Error())
+			continue
+		}
+
+		if !isGiveawayItem(&promotionalOffer) {
 			continue
 		}
 
@@ -112,8 +136,13 @@ func getGiveawayTime(promotions *Promotions) (GiveawayTime, *PromotionalOffer, e
 
 	if len(promotionalOffers) > firstValidIndex {
 		for _, promotionalOffer := range promotionalOffers[firstValidIndex+1:] {
-			tmpStartDate, tmpEndDate, err := GetTime(promotionalOffer)
-			if err != nil || !isRelevantDate(tmpStartDate) || !isGiveawayItem(&promotionalOffer) {
+			tmpStartDate, tmpEndDate, err := getTime(promotionalOffer)
+			if err != nil {
+				getLogger().Error(err.Error())
+				continue
+			}
+
+			if !isRelevantDate(tmpStartDate) || !isGiveawayItem(&promotionalOffer) {
 				continue
 			}
 
@@ -125,8 +154,19 @@ func getGiveawayTime(promotions *Promotions) (GiveawayTime, *PromotionalOffer, e
 		}
 	}
 
-	if !isRelevantDate(startDate) || !isGiveawayItem(&neededPromotionalOffer) {
-		return UnknownTime, nil, nil
+	if startDate == nil {
+		return giveawayTimeUnknown, nil, errors.New("empty start date")
+	}
+
+	if endDate == nil {
+		return giveawayTimeUnknown, nil, errors.New("empty end date")
+	}
+
+	isRelevant := isRelevantDate(startDate)
+	isForGiveaway := isGiveawayItem(&neededPromotionalOffer)
+
+	if !isRelevant || !isForGiveaway {
+		return giveawayTimeUnknown, nil, nil
 	}
 
 	startBeforeNow := startDate.Before(now)
@@ -135,25 +175,24 @@ func getGiveawayTime(promotions *Promotions) (GiveawayTime, *PromotionalOffer, e
 
 	switch {
 	case startBeforeNow && endDate.Before(now):
-		gaTime = Past
-		break
+		gaTime = giveawayTimePast
 	case startBeforeNow && endAfterNow:
-		gaTime = Now
-		break
+		gaTime = giveawayTimeNow
 	case startAfterNow && endAfterNow:
-		gaTime = Future
+		gaTime = giveawayTimeFuture
 	}
 
 	return gaTime, &neededPromotionalOffer, nil
 }
 
-func isGiveawayItem(offer *PromotionalOffer) bool {
+func isGiveawayItem(offer *promotionalOffer) bool {
 	return offer.DiscountSetting.DiscountType == "PERCENTAGE" && offer.DiscountSetting.DiscountPercentage == 0
 }
 
 func isRelevantDate(date *time.Time) bool {
-	return !(date.Before(time.Now().AddDate(0, 0, -8)) ||
-		date.After(time.Now().AddDate(0, 0, 8)))
+	return date == nil ||
+		!(date.Before(time.Now().AddDate(0, 0, -8)) ||
+			date.After(time.Now().AddDate(0, 0, 8)))
 }
 
 func filterNextGames(ga *Giveaway) {

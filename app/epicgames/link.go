@@ -6,14 +6,14 @@ import (
 )
 
 const fallbackLink = "https://t.me/epicgiveaways"
-const baseLink = "https://store.epicgames.com/en-US/"
+const baseLink = "https://store.epicgames.com/ru/"
 
 var slugPageTypes = []string{
 	"productHome",
 	"addon--cms-hybrid",
 }
 
-func GetLink(game *RawGame) string {
+func getLink(game *rawGame) string {
 	slug := getSlug(game)
 
 	if slug == "" {
@@ -34,7 +34,7 @@ func GetLink(game *RawGame) string {
 	return fmt.Sprintf("%s%s/%s", baseLink, gameCategory, slug)
 }
 
-func getSlug(game *RawGame) string {
+func getSlug(game *rawGame) string {
 	/*
 		Есть ощущение, что offerMappings и catalogNs.mappings - одно и то же, но лучше чекать оба
 	*/
