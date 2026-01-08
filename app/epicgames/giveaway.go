@@ -175,6 +175,10 @@ func GetGiveaway(locale, country string) (*Giveaway, error) {
 			}
 		}
 
+		if localGameStruct.gameType == gameTypeCurrent && ga.Next.IsZero() {
+			ga.Next = localGameStruct.Date.End
+		}
+
 		localGameStruct.Image = getGameThumbnail(rGame.Images)
 		localGameStruct.Price = convertPrice(rGame.Price)
 		localGameStruct.Url = getLink(&rGame)
@@ -210,7 +214,7 @@ func GetGiveaway(locale, country string) (*Giveaway, error) {
 
 	filterNextGames(ga)
 
-	if len(ga.CurrentGames) == 0 || len(ga.NextGames) == 0 {
+	if len(ga.CurrentGames) == 0 {
 		return nil, errors.New("incorrect response from Epic Games")
 	}
 

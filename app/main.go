@@ -196,7 +196,7 @@ func main() {
 			}
 		}
 
-		if postAnnounce {
+		if postAnnounce && len(giveaway.NextGames) > 0 {
 			_, err = poster.PostAnnounce(giveaway)
 			if err != nil {
 				logger.Panic("failed to post announce", zap.Error(err))
